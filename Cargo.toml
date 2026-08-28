@@ -1,0 +1,31 @@
+[package]
+name = "agent-audit-ledger"
+version = "0.1.0"
+edition = "2024"
+description = "Offline evidence manifests for agent-assisted code review"
+license = "MIT"
+repository = "https://github.com/B-Divyesh/sf-agent-audit-ledger"
+readme = "README.md"
+include = ["src/**", "tests/**", "schema/**", "Cargo.toml", "Cargo.lock", "README.md", "LICENSE", "CHANGELOG.md"]
+
+[[bin]]
+name = "aal"
+path = "src/main.rs"
+
+[dependencies]
+base64 = "0.22"
+clap = { version = "4.5", features = ["derive"] }
+ed25519-dalek = { version = "2.2", features = ["rand_core"] }
+rand = "0.8"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+
+[dev-dependencies]
+tempfile = "3"
+
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
+panic = "abort"

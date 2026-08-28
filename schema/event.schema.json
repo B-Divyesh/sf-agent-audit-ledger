@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-audit-ledger.sociobot.in/schema/event.schema.json",
+  "title": "Agent Audit Ledger event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "time", "type"],
+  "properties": {
+    "version": { "const": "1" },
+    "time": { "type": "string", "format": "date-time" },
+    "type": { "enum": ["file", "command", "test", "delegation"] },
+    "path": { "type": "string", "minLength": 1 },
+    "action": { "enum": ["added", "modified", "deleted", "renamed"] },
+    "reason": { "type": "string", "maxLength": 500 },
+    "command": { "type": "string", "minLength": 1 },
+    "exit_code": { "type": "integer" },
+    "files": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+    "name": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["passed", "failed", "skipped", "started", "completed", "cancelled"] },
+    "artifact": { "type": "string", "minLength": 1 },
+    "task": { "type": "string", "minLength": 1 },
+    "delegate": { "type": "string", "minLength": 1 }
+  },
+  "allOf": [
+    { "if": { "properties": { "type": { "const": "file" } } }, "then": { "required": ["path", "action", "reason"] } },
+    { "if": { "properties": { "type": { "const": "command" } } }, "then": { "required": ["command", "exit_code"] } },
+    { "if": { "properties": { "type": { "const": "test" } } }, "then": { "required": ["name", "status"] } },
+    { "if": { "properties": { "type": { "const": "delegation" } } }, "then": { "required": ["task", "delegate", "status"] } }
+  ]
+}

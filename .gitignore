@@ -1,6 +1,8 @@
 node_modules/
-dist/
-.env
-*.log
+target/
+test-results/
+playwright-report/
+.factory/evidence/
 graphify-out/
-.DS_Store
+*.aal-tmp
+*.key
