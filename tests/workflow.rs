@@ -124,6 +124,69 @@ fn enforces_schema_status_constraints_and_unique_file_references() {
 }
 
 #[test]
+fn rejects_evidence_references_without_a_changed_file_event() {
+    let root = tempdir().unwrap();
+    fs::write(root.path().join("changed.rs"), "changed").unwrap();
+    let events = agent_audit_ledger::parse_jsonl(
+        r#"{"version":"1","time":"2026-08-28T00:00:00Z","type":"file","path":"changed.rs","action":"modified","reason":"baseline"}
+{"version":"1","time":"2026-08-28T00:01:00Z","type":"command","command":"cargo test","exit_code":0,"files":["other.rs"]}"#,
+    )
+    .unwrap();
+    assert!(
+        agent_audit_ledger::build(
+            &events,
+            &BuildOptions {
+                root: root.path().into(),
+                ..Default::default()
+            }
+        )
+        .unwrap_err()
+        .contains("no matching file event")
+    );
+}
+
+#[test]
+fn redacted_file_ids_are_random_per_ledger_and_preserve_links() {
+    let root = tempdir().unwrap();
+    fs::write(root.path().join("src.rs"), "changed").unwrap();
+    let events = agent_audit_ledger::parse_jsonl(
+        r#"{"version":"1","time":"2026-08-28T00:00:00Z","type":"file","path":"src.rs","action":"modified","reason":"baseline"}
+{"version":"1","time":"2026-08-28T00:01:00Z","type":"command","command":"cargo test","exit_code":0,"files":["src.rs"]}"#,
+    )
+    .unwrap();
+    let options = BuildOptions {
+        root: root.path().into(),
+        ..Default::default()
+    };
+    let first = agent_audit_ledger::build(&events, &options).unwrap();
+    let second = agent_audit_ledger::build(&events, &options).unwrap();
+    assert!(first.files[0].id.starts_with("file:"));
+    assert_ne!(first.files[0].id, second.files[0].id);
+    assert_eq!(first.evidence[0].files, vec![first.files[0].id.clone()]);
+    assert_eq!(first.files[0].evidence, vec![first.evidence[0].id.clone()]);
+}
+
+#[test]
+fn selects_generated_at_by_instant_not_timestamp_spelling() {
+    let root = tempdir().unwrap();
+    fs::write(root.path().join("src.rs"), "changed").unwrap();
+    let events = agent_audit_ledger::parse_jsonl(
+        r#"{"version":"1","time":"2026-08-28T10:00:00+14:00","type":"file","path":"src.rs","action":"modified","reason":"earlier instant"}
+{"version":"1","time":"2026-08-28T00:00:00Z","type":"command","command":"cargo test","exit_code":0,"files":["src.rs"]}"#,
+    )
+    .unwrap();
+    let manifest = agent_audit_ledger::build(
+        &events,
+        &BuildOptions {
+            root: root.path().into(),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(manifest.generated_at, "2026-08-28T00:00:00Z");
+}
+
+#[test]
 fn signed_manifest_detects_tampering() {
     let root = tempdir().unwrap();
     let private = root.path().join("private.key");

@@ -50,7 +50,11 @@ async function sha256(textOrBuffer) {
   return [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
-async function opaque(kind, value) { return `${kind}:${(await sha256(value.replaceAll('\\', '/'))).slice(0, 12)}`; }
+function randomOpaqueId(kind) {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return `${kind}:${[...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('')}`;
+}
 
 export async function buildManifest(events, selectedFiles = [], options = {}) {
   const includePaths = Boolean(options.includePaths);
@@ -59,7 +63,8 @@ export async function buildManifest(events, selectedFiles = [], options = {}) {
   const records = [];
   const refs = new Map();
   for (const event of events.filter((item) => item.type === 'file')) {
-    const id = await opaque('file', event.path);
+    if (refs.has(event.path)) throw new Error(`File event for “${event.path}” is duplicated.`);
+    const id = randomOpaqueId('file');
     const supplied = fileMap.get(event.path) || [...fileMap.entries()].find(([name]) => name.endsWith(`/${event.path}`))?.[1];
     const deleted = event.action === 'deleted';
     const hash = !deleted && supplied ? await sha256(await supplied.arrayBuffer()) : '';
@@ -72,7 +77,11 @@ export async function buildManifest(events, selectedFiles = [], options = {}) {
     if (event.type === 'file') continue;
     evidenceNumber += 1;
     const fileRefs = [];
-    for (const path of event.files || []) fileRefs.push(await opaque('file', path));
+    for (const path of event.files || []) {
+      const recordIndex = refs.get(path);
+      if (recordIndex === undefined) throw new Error(`Evidence path “${path}” has no matching file event.`);
+      fileRefs.push(records[recordIndex].id);
+    }
     const id = `evidence-${String(evidenceNumber).padStart(3, '0')}`;
     let summary = event.name || event.task || event.command;
     let status = event.status || (event.exit_code === 0 ? 'passed' : 'failed');
@@ -89,7 +98,8 @@ export async function buildManifest(events, selectedFiles = [], options = {}) {
     delegated_tasks: evidence.filter((item) => item.type === 'delegation').length,
     unlinked_events: evidence.filter((item) => !item.files.length).length
   };
-  return { schema_version: '1', generated_at: events.map((event) => event.time).sort().at(-1), privacy: `${includePaths ? 'paths included by explicit opt-in' : 'paths redacted'}; ${includeArguments ? 'command arguments included by explicit opt-in' : 'command arguments redacted'}; prompts and file contents excluded`, summary, files: records, evidence };
+  const latestEvent = events.reduce((latest, event) => Date.parse(event.time) > Date.parse(latest.time) ? event : latest);
+  return { schema_version: '1', generated_at: latestEvent.time, privacy: `${includePaths ? 'paths included by explicit opt-in' : 'paths redacted with per-ledger random opaque IDs'}; ${includeArguments ? 'command arguments included by explicit opt-in' : 'command arguments redacted'}; prompts and file contents excluded`, summary, files: records, evidence };
 }
 
 export function markdown(manifest) {

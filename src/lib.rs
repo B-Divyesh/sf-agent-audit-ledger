@@ -16,7 +16,7 @@
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use chrono::DateTime;
 use ed25519_dalek::{Signature as DalekSignature, Signer, SigningKey, Verifier, VerifyingKey};
-use rand::rngs::OsRng;
+use rand::{RngCore, rngs::OsRng};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::{HashMap, HashSet};
@@ -284,6 +284,7 @@ pub fn build(events: &[Event], options: &BuildOptions) -> Result<Manifest, Strin
         signature: None,
     };
     let mut index = HashMap::new();
+    let mut opaque_ids = OpaqueIds::default();
     for event in events.iter().filter(|event| event.kind == "file") {
         let path = event.path.as_deref().unwrap();
         let deleted = event.action.as_deref() == Some("deleted");
@@ -292,7 +293,7 @@ pub fn build(events: &[Event], options: &BuildOptions) -> Result<Manifest, Strin
         if index.contains_key(&relative) {
             return Err(format!("file {path:?}: duplicate file event"));
         }
-        let id = opaque_id("file", &relative);
+        let id = opaque_ids.id_for("file", &relative);
         let mut record = FileRecord {
             id: id.clone(),
             path: if options.include_paths {
@@ -324,7 +325,15 @@ pub fn build(events: &[Event], options: &BuildOptions) -> Result<Manifest, Strin
         for path in &event.files {
             let relative = safe_relative(&root, path, true)
                 .map_err(|error| format!("evidence path {path:?}: {error}"))?;
-            refs.push(opaque_id("file", &relative));
+            let Some(&file_index) = index.get(&relative) else {
+                return Err(format!(
+                    "evidence path {path:?}: no matching file event; add a file event before linking evidence"
+                ));
+            };
+            refs.push(opaque_ids.id_for("file", &relative));
+            manifest.files[file_index]
+                .evidence
+                .push(format!("evidence-{evidence_number:03}"));
         }
         let id = format!("evidence-{evidence_number:03}");
         let (summary, status) = match event.kind.as_str() {
@@ -367,7 +376,7 @@ pub fn build(events: &[Event], options: &BuildOptions) -> Result<Manifest, Strin
                 if options.include_paths {
                     slash(&relative)
                 } else {
-                    opaque_id("artifact", &relative)
+                    opaque_ids.id_for("artifact", &relative)
                 },
                 hash_file(&root.join(relative))
                     .map_err(|error| format!("hash artifact {path:?}: {error}"))?,
@@ -377,11 +386,6 @@ pub fn build(events: &[Event], options: &BuildOptions) -> Result<Manifest, Strin
         };
         if refs.is_empty() {
             manifest.summary.unlinked_events += 1;
-        }
-        for reference in &refs {
-            if let Some(file) = manifest.files.iter_mut().find(|file| &file.id == reference) {
-                file.evidence.push(id.clone());
-            }
         }
         manifest.evidence.push(EvidenceRecord {
             id,
@@ -395,12 +399,20 @@ pub fn build(events: &[Event], options: &BuildOptions) -> Result<Manifest, Strin
             artifact_sha256,
         });
     }
-    manifest.generated_at = events
-        .iter()
-        .map(|event| event.time.as_str())
-        .max()
-        .unwrap()
-        .to_string();
+    let mut latest = None;
+    for event in events {
+        let instant = DateTime::parse_from_rfc3339(&event.time)
+            .map_err(|_| format!("event time {:?} must be RFC 3339", event.time))?;
+        if latest
+            .as_ref()
+            .is_none_or(|(current, _): &(DateTime<_>, &str)| current < &instant)
+        {
+            latest = Some((instant, event.time.as_str()));
+        }
+    }
+    manifest.generated_at = latest
+        .map(|(_, time)| time.to_string())
+        .ok_or_else(|| "cannot build a ledger without events".to_string())?;
     manifest.files.sort_by(|a, b| a.id.cmp(&b.id));
     manifest.summary.file_count = manifest.files.len();
     manifest.summary.evidence_count = manifest.evidence.len();
@@ -447,9 +459,28 @@ fn hash_file(path: &Path) -> Result<String, String> {
     Ok(format!("{:x}", Sha256::digest(data)))
 }
 
-fn opaque_id(kind: &str, path: &Path) -> String {
-    let digest = Sha256::digest(slash(path).as_bytes());
-    format!("{kind}:{}", &format!("{digest:x}")[..12])
+#[derive(Default)]
+struct OpaqueIds {
+    values: HashMap<(String, PathBuf), String>,
+}
+
+impl OpaqueIds {
+    fn id_for(&mut self, kind: &str, path: &Path) -> String {
+        self.values
+            .entry((kind.into(), path.to_path_buf()))
+            .or_insert_with(|| random_opaque_id(kind))
+            .clone()
+    }
+}
+
+fn random_opaque_id(kind: &str) -> String {
+    let mut bytes = [0_u8; 16];
+    OsRng.fill_bytes(&mut bytes);
+    let value = bytes
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<String>();
+    format!("{kind}:{value}")
 }
 
 fn slash(path: &Path) -> String {
@@ -478,9 +509,11 @@ fn privacy_label(options: &BuildOptions) -> String {
     match (options.include_paths, options.include_arguments) {
         (true, true) => "paths and command arguments included by explicit opt-in",
         (true, false) => "paths included by explicit opt-in; command arguments redacted",
-        (false, true) => "paths redacted; command arguments included by explicit opt-in",
+        (false, true) => {
+            "paths redacted with per-ledger random opaque IDs; command arguments included by explicit opt-in"
+        }
         (false, false) => {
-            "paths and command arguments redacted; prompts and file contents excluded"
+            "paths redacted with per-ledger random opaque IDs; command arguments redacted; prompts and file contents excluded"
         }
     }
     .into()

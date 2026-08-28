@@ -35,6 +35,23 @@ test('browser parser enforces per-type status constraints', () => {
   assert.doesNotThrow(() => parseEvents('{"version":"1","time":"2026-08-27T10:12:00Z","type":"test","name":"suite","status":"passed","files":["src/lib.rs"]}'));
 });
 
+test('browser preview rejects dangling evidence references', async () => {
+  const dangling = `{"version":"1","time":"2026-08-28T00:00:00Z","type":"file","path":"changed.rs","action":"modified","reason":"baseline"}
+{"version":"1","time":"2026-08-28T00:01:00Z","type":"command","command":"cargo test","exit_code":0,"files":["other.rs"]}`;
+  await assert.rejects(buildManifest(parseEvents(dangling)), /no matching file event/);
+});
+
+test('browser preview uses random opaque IDs and compares timestamp instants', async () => {
+  const offsetEvents = `{"version":"1","time":"2026-08-28T10:00:00+14:00","type":"file","path":"src/lib.rs","action":"modified","reason":"earlier instant"}
+{"version":"1","time":"2026-08-28T00:00:00Z","type":"command","command":"cargo test","exit_code":0,"files":["src/lib.rs"]}`;
+  const first = await buildManifest(parseEvents(offsetEvents));
+  const second = await buildManifest(parseEvents(offsetEvents));
+  assert.match(first.files[0].id, /^file:[a-f0-9]{32}$/);
+  assert.notEqual(first.files[0].id, second.files[0].id);
+  assert.deepEqual(first.evidence[0].files, [first.files[0].id]);
+  assert.equal(first.generated_at, '2026-08-28T00:00:00Z');
+});
+
 test('the website publishes the CLI event schema byte-for-byte', async () => {
   const [source, published] = await Promise.all([
     readFile(new URL('../../schema/event.schema.json', import.meta.url), 'utf8'),

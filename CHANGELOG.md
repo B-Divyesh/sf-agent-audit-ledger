@@ -4,6 +4,12 @@ All notable changes follow semantic versioning.
 
 ## Unreleased
 
+- Reject evidence references that have no corresponding changed-file event in
+  both the CLI and browser workbench.
+- Replace deterministic path-derived IDs with fresh per-ledger random opaque
+  IDs while preserving file-to-evidence linkage.
+- Select `generated_at` by the parsed RFC 3339 instant rather than lexical
+  timestamp ordering in the CLI and browser workbench.
 - Reject calendar-invalid RFC 3339 timestamps and duplicate evidence file
   references in both the CLI and browser workbench.
 - Align the published event schema with per-type status constraints and keep

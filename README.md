@@ -28,7 +28,9 @@ Create `actions.jsonl` using the [open event schema](schema/event.schema.json):
 ```
 
 Build Markdown and JSON ledgers. Paths and command arguments are redacted by
-default; file contents and prompts are never copied into the ledger.
+default; each ledger uses fresh random opaque IDs so a guessed path cannot be
+matched to its exported ID. File contents and prompts are never copied into the
+ledger.
 
 ```sh
 aal build --input actions.jsonl --markdown audit.md --json audit.json --root .
@@ -53,8 +55,9 @@ print the bundled schema.
 Every line is one UTF-8 JSON object with `version: "1"` and one of four event
 types: `file`, `command`, `test`, or `delegation`. Unknown fields are rejected
 so producer mistakes do not silently weaken an audit. Timestamps use RFC 3339.
-Calendar-invalid dates, invalid UTC offsets, duplicate file references, and
-event-type-incompatible statuses are rejected before a ledger is generated.
+Calendar-invalid dates, invalid UTC offsets, duplicate file references,
+references without a corresponding file event, and event-type-incompatible
+statuses are rejected before a ledger is generated.
 Paths are resolved beneath `--root`; traversal and symlink escapes are rejected.
 Hashes establish byte identity only—they do not prove author intent or code
 quality.
