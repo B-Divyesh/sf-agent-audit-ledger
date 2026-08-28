@@ -3,19 +3,40 @@ const actions = new Set(['added', 'modified', 'deleted', 'renamed']);
 const statuses = new Set(['passed', 'failed', 'skipped', 'started', 'completed', 'cancelled']);
 const testStatuses = new Set(['passed', 'failed', 'skipped']);
 const delegationStatuses = new Set(['started', 'completed', 'failed', 'cancelled']);
+const rfc3339 = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(\.(\d+))?(Z|[+-](\d{2}):(\d{2}))$/;
 
 function nonBlank(value) { return typeof value === 'string' && /\S/.test(value); }
 
 export function isRfc3339(value) {
-  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(Z|[+-](\d{2}):(\d{2}))$/.exec(value || '');
+  const match = rfc3339.exec(value || '');
   if (!match) return false;
-  const [, yearText, monthText, dayText, hourText, minuteText, secondText, , offsetHourText, offsetMinuteText] = match;
+  const [, yearText, monthText, dayText, hourText, minuteText, secondText, , , , offsetHourText, offsetMinuteText] = match;
   const [year, month, day, hour, minute, second] = [yearText, monthText, dayText, hourText, minuteText, secondText].map(Number);
   const leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
   const monthDays = [31, leapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
   return month >= 1 && month <= 12 && day >= 1 && day <= monthDays[month - 1]
     && hour <= 23 && minute <= 59 && second <= 60
     && (!offsetHourText || (Number(offsetHourText) <= 23 && Number(offsetMinuteText) <= 59));
+}
+
+function timestampInstant(value) {
+  const match = rfc3339.exec(value);
+  const [, yearText, monthText, dayText, hourText, minuteText, secondText, , fractionText, zone, offsetHourText, offsetMinuteText] = match;
+  // Set the calendar fields independently so years 0000–0099 are not shifted by
+  // Date.UTC's legacy 1900 offset. setUTCHours also correctly carries :60.
+  const date = new Date(0);
+  date.setUTCFullYear(Number(yearText), Number(monthText) - 1, Number(dayText));
+  date.setUTCHours(Number(hourText), Number(minuteText), Number(secondText), 0);
+  const offsetMinutes = zone === 'Z' ? 0 : (Number(offsetHourText) * 60 + Number(offsetMinuteText)) * (zone[0] === '+' ? 1 : -1);
+  return [date.getTime() / 1000 - offsetMinutes * 60, fractionText || ''];
+}
+
+function isLaterTimestamp(candidate, current) {
+  const [candidateSeconds, candidateFraction] = timestampInstant(candidate);
+  const [currentSeconds, currentFraction] = timestampInstant(current);
+  if (candidateSeconds !== currentSeconds) return candidateSeconds > currentSeconds;
+  const width = Math.max(candidateFraction.length, currentFraction.length);
+  return candidateFraction.padEnd(width, '0') > currentFraction.padEnd(width, '0');
 }
 
 export function parseEvents(text) {
@@ -98,7 +119,7 @@ export async function buildManifest(events, selectedFiles = [], options = {}) {
     delegated_tasks: evidence.filter((item) => item.type === 'delegation').length,
     unlinked_events: evidence.filter((item) => !item.files.length).length
   };
-  const latestEvent = events.reduce((latest, event) => Date.parse(event.time) > Date.parse(latest.time) ? event : latest);
+  const latestEvent = events.reduce((latest, event) => isLaterTimestamp(event.time, latest.time) ? event : latest);
   return { schema_version: '1', generated_at: latestEvent.time, privacy: `${includePaths ? 'paths included by explicit opt-in' : 'paths redacted with per-ledger random opaque IDs'}; ${includeArguments ? 'command arguments included by explicit opt-in' : 'command arguments redacted'}; prompts and file contents excluded`, summary, files: records, evidence };
 }
 

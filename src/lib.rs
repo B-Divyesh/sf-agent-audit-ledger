@@ -14,7 +14,7 @@
 //! ```
 
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
-use chrono::DateTime;
+use chrono::{DateTime, Duration};
 use ed25519_dalek::{Signature as DalekSignature, Signer, SigningKey, Verifier, VerifyingKey};
 use rand::{RngCore, rngs::OsRng};
 use serde::{Deserialize, Serialize};
@@ -260,8 +260,20 @@ fn validate_event(event: &Event) -> Result<(), String> {
     }
 }
 
+fn parse_rfc3339_instant(value: &str) -> Result<DateTime<chrono::FixedOffset>, chrono::ParseError> {
+    // Chrono preserves a leap second as a special representation of the prior
+    // second. Normalize it before comparing instants so `:60` sorts after
+    // `:59` and before the following second, just as RFC 3339 requires.
+    if value.as_bytes().get(17..19) == Some(b"60") {
+        let normalized = format!("{}59{}", &value[..17], &value[19..]);
+        DateTime::parse_from_rfc3339(&normalized).map(|instant| instant + Duration::seconds(1))
+    } else {
+        DateTime::parse_from_rfc3339(value)
+    }
+}
+
 fn valid_rfc3339(value: &str) -> bool {
-    DateTime::parse_from_rfc3339(value).is_ok()
+    parse_rfc3339_instant(value).is_ok()
 }
 
 fn non_blank(value: &str) -> bool {
@@ -401,7 +413,7 @@ pub fn build(events: &[Event], options: &BuildOptions) -> Result<Manifest, Strin
     }
     let mut latest = None;
     for event in events {
-        let instant = DateTime::parse_from_rfc3339(&event.time)
+        let instant = parse_rfc3339_instant(&event.time)
             .map_err(|_| format!("event time {:?} must be RFC 3339", event.time))?;
         if latest
             .as_ref()

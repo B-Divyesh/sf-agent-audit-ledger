@@ -52,6 +52,13 @@ test('browser preview uses random opaque IDs and compares timestamp instants', a
   assert.equal(first.generated_at, '2026-08-28T00:00:00Z');
 });
 
+test('browser preview orders RFC 3339 leap-second fractions by their instant', async () => {
+  const leapEvents = `{"version":"1","time":"2016-12-31T23:59:60.900Z","type":"file","path":"src/lib.rs","action":"modified","reason":"later leap fraction"}
+{"version":"1","time":"2017-01-01T00:00:00.800Z","type":"command","command":"cargo test","exit_code":0,"files":["src/lib.rs"]}`;
+  const manifest = await buildManifest(parseEvents(leapEvents));
+  assert.equal(manifest.generated_at, '2016-12-31T23:59:60.900Z');
+});
+
 test('the website publishes the CLI event schema byte-for-byte', async () => {
   const [source, published] = await Promise.all([
     readFile(new URL('../../schema/event.schema.json', import.meta.url), 'utf8'),

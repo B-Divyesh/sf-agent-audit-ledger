@@ -27,6 +27,15 @@ test('empty and error states explain the next step', async ({ page }) => {
   await expect(page.getByRole('status').filter({ hasText: /Add at least one/ })).toBeVisible();
 });
 
+test('browser workbench rejects evidence not linked to a changed file', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#events').fill(`{"version":"1","time":"2026-08-28T00:00:00Z","type":"file","path":"changed.rs","action":"modified","reason":"baseline"}
+{"version":"1","time":"2026-08-28T00:01:00Z","type":"command","command":"cargo test","exit_code":0,"files":["other.rs"]}`);
+  await page.getByRole('button', { name: 'Build the ledger' }).click();
+  await expect(page.getByText('Ledger not built')).toBeVisible();
+  await expect(page.locator('#demo-status')).toContainText('no matching file event');
+});
+
 test('keyboard starts at the skip link with no horizontal overflow', async ({ page }) => {
   await page.goto('/');
   await page.keyboard.press('Tab');

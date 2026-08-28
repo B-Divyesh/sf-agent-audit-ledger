@@ -187,6 +187,26 @@ fn selects_generated_at_by_instant_not_timestamp_spelling() {
 }
 
 #[test]
+fn selects_generated_at_correctly_across_a_leap_second() {
+    let root = tempdir().unwrap();
+    fs::write(root.path().join("src.rs"), "changed").unwrap();
+    let events = agent_audit_ledger::parse_jsonl(
+        r#"{"version":"1","time":"2016-12-31T23:59:60.900Z","type":"file","path":"src.rs","action":"modified","reason":"leap second"}
+{"version":"1","time":"2017-01-01T00:00:00.800Z","type":"command","command":"cargo test","exit_code":0,"files":["src.rs"]}"#,
+    )
+    .unwrap();
+    let manifest = agent_audit_ledger::build(
+        &events,
+        &BuildOptions {
+            root: root.path().into(),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(manifest.generated_at, "2016-12-31T23:59:60.900Z");
+}
+
+#[test]
 fn signed_manifest_detects_tampering() {
     let root = tempdir().unwrap();
     let private = root.path().join("private.key");
