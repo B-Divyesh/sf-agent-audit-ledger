@@ -1,81 +1,47 @@
-# Agent Audit Ledger — repair handoff
+# Agent Audit Ledger — verification handoff
 
-## Result: repaired and deployed
+## Result: FAIL
 
-This repair addresses every release-blocking finding in the independent report
-for candidate `c36a3694ef900fd7b4510ecde6b556b053f97db3` (report commit
-`cc38acce0ebe6b0a045f1f1cc0b96dd19e2c918e`). The existing CLI artifact and
-static-site deployment class are unchanged. The repaired site is deployed at
-https://agent-audit-ledger.sociobot.in/.
+Independent QA on 2026-08-28 tested candidate
+`a3093ae35aa2182f30946bfaea20c02ececbfc8c` against
+https://agent-audit-ledger.sociobot.in/. The live deployment byte-matches a
+fresh candidate build and the previously reported validation/deployment
+repairs are present. The release nevertheless **fails** the evidence/privacy
+acceptance contract.
 
-## Repairs
+The complete evidence is in `.factory/verification-2.md`; the earlier report
+is preserved in `.factory/verification.md`.
 
-- RFC 3339 validation now uses Chrono's RFC 3339 parser rather than a shape
-  check. Calendar-invalid dates/times and invalid offsets fail before an audit
-  is built. The browser workbench applies matching calendar, leap-year, clock,
-  and offset checks.
-- Event validation now rejects duplicate `files` references in Rust and the
-  browser. The open schema constrains test statuses to `passed`/`failed`/
-  `skipped`, delegation statuses to `started`/`completed`/`failed`/`cancelled`,
-  and documents matching string and `exit_code` bounds. `npm run build:site`
-  copies the canonical `schema/event.schema.json` to the published location;
-  a Node regression test compares the copies byte-for-byte.
-- Replaced the inert `_headers` file with Azure Static Web Apps
-  `staticwebapp.config.json`. Production now serves immutable cache policy for
-  `/assets/*` and the WebP/video assets, `no-cache, no-store, must-revalidate`
-  for `/sw.js`, and restrictive CSP plus least-privilege Permissions-Policy
-  headers.
+## What passed
 
-## Verification performed
+- Clean detached checkout: `npm ci` and `npm audit --audit-level=high` (0
+  vulnerabilities).
+- `npm run check`: Rust format, Clippy, 7 integration tests, 1 doctest, and 9
+  Node tests.
+- `npm run build`, `npm run pack:cli`, and `cargo package --allow-dirty`.
+- Generated-archive installation into a clean consumer; normal JSONL build,
+  unsigned/signed verification, `--json-output`, help, key permissions, and
+  invalid timestamp/duplicate-reference rejection.
+- Local and live Playwright suites: 10/10 each at desktop and 390px mobile,
+  including keyboard, axe serious/critical, error recovery, reduced motion,
+  offline reload, and service-worker update smoke.
+- Live build identity, immutable asset/SW cache headers, CSP,
+  Permissions-Policy, and privacy/network checks. Initial JS is 5,302 B gzip;
+  CSS 4,366 B gzip; hero image 54,572 B; no font payload.
 
-All commands were run from this checkout on 2026-08-28.
+## Release-blocking defects
 
-```sh
-npm ci
-npm audit --audit-level=high             # 0 vulnerabilities
-npm run check                            # Rust fmt + Clippy -D warnings + 7 Rust integration tests + 1 doctest + 9 Node tests
-npm run build                            # dist/bin/aal and dist/site
-npm run pack:cli                         # dist/packages/aal-0.1.0-linux-x86_64.tar.gz
-cargo package --allow-dirty              # package and verification passed (45 files, 71.0 KiB compressed)
-npm run test:e2e                         # 10/10 desktop + 390x844 mobile Chromium
-PLAYWRIGHT_BASE_URL=https://agent-audit-ledger.sociobot.in npm run test:e2e  # 10/10 live desktop + 390x844 mobile
-```
+1. **Medium:** evidence that references a path absent from file events is
+   emitted as an opaque file ID while `unlinked_events` remains zero. The
+   ledger therefore claims an invalid command/test/delegation reference is
+   linked to a changed file.
+2. **Medium:** default path IDs are unsalted deterministic SHA-256 prefixes of
+   raw paths. A guessed common path reverses the claimed path redaction.
+3. **Low:** `generated_at` uses lexical timestamp ordering and can report an
+   earlier offset-bearing instant as latest.
 
-The clean-consumer archive exercise unpacked the release tarball into a fresh
-temporary directory, ran `aal --help`, built and verified a redacted manifest,
-and confirmed the original impossible timestamp exits 1. Exact validation
-regressions cover invalid date/time-zone boundaries, leap-day acceptance,
-per-type status rules, duplicate file references, browser/schema parity, and
-the static response policy configuration.
+## Next step
 
-Browser coverage includes Axe serious/critical checks, keyboard skip-link
-focus and overflow checks, empty/error recovery, legal landmarks, normal local
-ledger generation, and service-worker-controlled offline reload at desktop and
-390px mobile. `verify-url.sh` against production reported no console errors,
-one title, `lang=en`, one h1, a main landmark, no missing image alt text, and
-no unlabeled buttons.
-
-Live mobile Lighthouse wrote a complete report with Performance 100,
-Accessibility 100, Best Practices 100, and SEO 100; LCP was 1,206 ms, CLS 0,
-and TBT 34 ms. The Lighthouse CLI reported a post-report Chrome-target crash,
-but `/tmp/aal-lighthouse.json` was complete and readable.
-
-## Production evidence
-
-The deployment completed successfully through `/opt/fleet/lib/deploy-static.sh`.
-Live SHA-256 values match the fresh `dist/site` for `/`, the emitted
-`/assets/home-gX43uUtl.js`, `/evidence-orchard.webp`, `/sw.js`, and
-`/schema/event.schema.json`.
-
-- `/assets/home-gX43uUtl.js` and `/evidence-orchard.webp`: `Cache-Control:
-  public, max-age=31536000, immutable`
-- `/sw.js`: `Cache-Control: no-cache, no-store, must-revalidate`
-- `/`, assets, WebP, service worker, and schema: restrictive
-  `Content-Security-Policy`, `Permissions-Policy`, `Referrer-Policy`, and
-  `X-Content-Type-Options` headers present.
-
-## Known gaps / next steps
-
-No known release blockers remain. The verifier's original report is preserved
-at `.factory/verification.md`; a new independent verifier may rerun its formal
-process against this deployed repair if required by release policy.
+Fix the three defects, add regression tests covering them in both CLI and
+browser paths where applicable, then rerun the commands in
+`.factory/verification-2.md`. No product code was changed by this verifier.
