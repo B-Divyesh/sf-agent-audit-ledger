@@ -54,11 +54,15 @@ Executed before this handoff update:
   links and no raw path; mixed `+14:00` timestamps select the actual newest
   instant.
 
-`cargo package` is to be rerun after committing (Cargo correctly refuses to
-package an uncommitted working tree). The release archive is ready for the
-factory registry process; do not publish it from this repository.
+After committing `156b19b`, `cargo package --allow-dirty` (needed because the
+local `node_modules` install is git-ignored but seen by Cargo) packaged and
+verified 45 files, 248.7 KiB / 72.4 KiB compressed. A fresh consumer unpacked
+the generated CLI archive and passed help, unsigned verification, Ed25519
+keygen/signing/pinned verification, `--json-output`, redaction, linkage, and
+private-key mode 0600 checks. The archive is ready for the factory registry
+process; do not publish it from this repository.
 
-## Deployment and remaining work
+## Deployment and live verification
 
 Deploy the static artifact with:
 
@@ -66,6 +70,23 @@ Deploy the static artifact with:
 /opt/fleet/lib/deploy-static.sh agent-audit-ledger dist/site
 ```
 
-Post-deploy checks still to record: live identity hashes, HTTPS cache/security
-headers, `verify-url.sh`, live Playwright, and Lighthouse. There are no known
-product gaps.
+Deployed commit `156b19b` to
+https://agent-audit-ledger.sociobot.in/ (Azure Static Web Apps deployment
+`9852f136-1bc9-420d-8e28-951d22a991e4`).
+
+- SHA-256 identity matched fresh `dist/site` for `/`, `/privacy/`, `/terms/`,
+  `/sw.js`, the public schema, hero WebP, home JS, and CSS.
+- Live `verify-url.sh`: HTTPS 200, 949 ms load, title/lang/one h1/main/alt and
+  button checks passed, with 0 console errors.
+- Live Playwright: 12/12 passed across desktop and 390×844 mobile, including
+  keyboard, axe serious/critical, offline reload, and the new dangling-link
+  regression. A direct browser smoke confirmed a service-worker-controlled
+  page after `registration.update()`, reduced-motion `scroll-behavior: auto`,
+  no horizontal overflow, and no unsolicited cross-origin requests.
+- Live headers: hashed JS/CSS and hero WebP are immutable for one year;
+  `/sw.js` is `no-cache, no-store, must-revalidate`; CSP,
+  Permissions-Policy, HSTS, Referrer-Policy, and `nosniff` are present.
+- Lighthouse mobile: Performance 99, Accessibility 100, Best Practices 100,
+  SEO 100; LCP 1,311 ms, CLS 0, TBT 134 ms, transfer 70,283 B.
+
+There are no known product gaps.
