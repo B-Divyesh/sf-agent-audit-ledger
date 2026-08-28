@@ -8,7 +8,8 @@
     "test": "cargo test --all && node --test site/test/*.test.js",
     "test:e2e": "playwright test -c site/playwright.config.js",
     "build:cli": "cargo build --release && mkdir -p dist/bin && cp target/release/aal dist/bin/aal",
-    "build:site": "vite build --config site/vite.config.js",
+    "sync:schema": "node scripts/sync-schema.mjs",
+    "build:site": "npm run sync:schema && vite build --config site/vite.config.js",
     "build": "npm run build:cli && npm run build:site",
     "pack:cli": "sh scripts/package-cli.sh",
     "check": "cargo fmt --check && cargo clippy --all-targets -- -D warnings && npm test"

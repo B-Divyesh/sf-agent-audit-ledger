@@ -53,6 +53,8 @@ print the bundled schema.
 Every line is one UTF-8 JSON object with `version: "1"` and one of four event
 types: `file`, `command`, `test`, or `delegation`. Unknown fields are rejected
 so producer mistakes do not silently weaken an audit. Timestamps use RFC 3339.
+Calendar-invalid dates, invalid UTC offsets, duplicate file references, and
+event-type-incompatible statuses are rejected before a ledger is generated.
 Paths are resolved beneath `--root`; traversal and symlink escapes are rejected.
 Hashes establish byte identity only—they do not prove author intent or code
 quality.
@@ -74,8 +76,10 @@ fonts, analytics, or network calls except an explicit license verification.
 
 ## Deploy
 
-Deploy `dist/site/` as a static site. The factory publishes release archives
-from `dist/packages/`; this repository does not contain registry credentials.
+Deploy `dist/site/` as a static site. It includes the Azure Static Web Apps
+configuration for immutable assets, service-worker updates, CSP, and
+Permissions-Policy. The factory publishes release archives from
+`dist/packages/`; this repository does not contain registry credentials.
 
 ## Privacy and security
 

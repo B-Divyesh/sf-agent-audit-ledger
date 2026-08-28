@@ -75,6 +75,55 @@ fn rejects_unknown_fields_and_root_escape() {
 }
 
 #[test]
+fn rejects_calendar_invalid_rfc3339_timestamps() {
+    for timestamp in [
+        "2026-99-99T99:99:99Z",
+        "2025-02-29T12:00:00Z",
+        "2026-04-31T12:00:00Z",
+        "2026-08-27T24:00:00Z",
+        "2026-08-27T10:00:00+24:00",
+    ] {
+        let input = format!(
+            r#"{{"version":"1","time":"{timestamp}","type":"file","path":"file.rs","action":"added","reason":"valid fields"}}"#
+        );
+        assert!(
+            agent_audit_ledger::parse_jsonl(&input)
+                .unwrap_err()
+                .contains("time must be RFC 3339"),
+            "{timestamp} should be rejected"
+        );
+    }
+    assert!(agent_audit_ledger::parse_jsonl(
+        r#"{"version":"1","time":"2024-02-29T23:59:59.123+23:59","type":"file","path":"file.rs","action":"added","reason":"valid leap day"}"#
+    )
+    .is_ok());
+}
+
+#[test]
+fn enforces_schema_status_constraints_and_unique_file_references() {
+    let test_started = r#"{"version":"1","time":"2026-08-27T10:12:00Z","type":"test","name":"suite","status":"started"}"#;
+    assert!(
+        agent_audit_ledger::parse_jsonl(test_started)
+            .unwrap_err()
+            .contains("test events require")
+    );
+    let delegation_skipped = r#"{"version":"1","time":"2026-08-27T10:12:00Z","type":"delegation","task":"review","delegate":"agent-1","status":"skipped"}"#;
+    assert!(
+        agent_audit_ledger::parse_jsonl(delegation_skipped)
+            .unwrap_err()
+            .contains("delegation events require")
+    );
+    let duplicate_files = r#"{"version":"1","time":"2026-08-27T10:12:00Z","type":"command","command":"cargo test","exit_code":0,"files":["src/lib.rs","src/lib.rs"]}"#;
+    assert!(
+        agent_audit_ledger::parse_jsonl(duplicate_files)
+            .unwrap_err()
+            .contains("duplicate")
+    );
+    let valid_test = r#"{"version":"1","time":"2026-08-27T10:12:00Z","type":"test","name":"suite","status":"passed","files":["src/lib.rs"]}"#;
+    assert!(agent_audit_ledger::parse_jsonl(valid_test).is_ok());
+}
+
+#[test]
 fn signed_manifest_detects_tampering() {
     let root = tempdir().unwrap();
     let private = root.path().join("private.key");

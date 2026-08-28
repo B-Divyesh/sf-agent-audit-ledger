@@ -14,11 +14,12 @@
 //! ```
 
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
+use chrono::DateTime;
 use ed25519_dalek::{Signature as DalekSignature, Signer, SigningKey, Verifier, VerifyingKey};
 use rand::rngs::OsRng;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 
@@ -143,7 +144,15 @@ pub fn parse_jsonl(input: &str) -> Result<Vec<Event>, String> {
         if line.trim().is_empty() {
             continue;
         }
-        let event: Event = serde_json::from_str(line)
+        let value: serde_json::Value = serde_json::from_str(line)
+            .map_err(|error| format!("line {}: invalid JSON event: {error}", index + 1))?;
+        if value
+            .as_object()
+            .is_some_and(|object| object.values().any(serde_json::Value::is_null))
+        {
+            return Err(format!("line {}: event fields cannot be null", index + 1));
+        }
+        let event: Event = serde_json::from_value(value)
             .map_err(|error| format!("line {}: invalid JSON event: {error}", index + 1))?;
         validate_event(&event).map_err(|error| format!("line {}: {error}", index + 1))?;
         events.push(event);
@@ -161,8 +170,55 @@ fn validate_event(event: &Event) -> Result<(), String> {
     if !valid_rfc3339(&event.time) {
         return Err("time must be RFC 3339".into());
     }
-    if event.files.iter().any(|value| value.trim().is_empty()) {
-        return Err("files cannot contain an empty path".into());
+    if event.files.iter().any(|value| !non_blank(value)) {
+        return Err("files cannot contain a blank path".into());
+    }
+    if event.files.iter().collect::<HashSet<_>>().len() != event.files.len() {
+        return Err("files cannot contain duplicate paths".into());
+    }
+    if event.path.as_deref().is_some_and(|value| !non_blank(value))
+        || event
+            .reason
+            .as_deref()
+            .is_some_and(|value| !non_blank(value))
+        || event
+            .command
+            .as_deref()
+            .is_some_and(|value| !non_blank(value))
+        || event.name.as_deref().is_some_and(|value| !non_blank(value))
+        || event
+            .artifact
+            .as_deref()
+            .is_some_and(|value| !non_blank(value))
+        || event.task.as_deref().is_some_and(|value| !non_blank(value))
+        || event
+            .delegate
+            .as_deref()
+            .is_some_and(|value| !non_blank(value))
+    {
+        return Err("event strings cannot be blank".into());
+    }
+    if event
+        .reason
+        .as_deref()
+        .is_some_and(|value| value.len() > 500)
+    {
+        return Err("reason must be 500 characters or fewer".into());
+    }
+    if event
+        .action
+        .as_deref()
+        .is_some_and(|value| !matches!(value, "added" | "modified" | "deleted" | "renamed"))
+    {
+        return Err("action must be added, modified, deleted, or renamed".into());
+    }
+    if event.status.as_deref().is_some_and(|value| {
+        !matches!(
+            value,
+            "passed" | "failed" | "skipped" | "started" | "completed" | "cancelled"
+        )
+    }) {
+        return Err("status is not supported".into());
     }
     match event.kind.as_str() {
         "file"
@@ -205,14 +261,11 @@ fn validate_event(event: &Event) -> Result<(), String> {
 }
 
 fn valid_rfc3339(value: &str) -> bool {
-    let bytes = value.as_bytes();
-    bytes.len() >= 20
-        && bytes.get(4) == Some(&b'-')
-        && bytes.get(7) == Some(&b'-')
-        && bytes.get(10) == Some(&b'T')
-        && bytes.get(13) == Some(&b':')
-        && bytes.get(16) == Some(&b':')
-        && (value.ends_with('Z') || value.rfind(['+', '-']).is_some_and(|i| i > 18))
+    DateTime::parse_from_rfc3339(value).is_ok()
+}
+
+fn non_blank(value: &str) -> bool {
+    !value.trim().is_empty()
 }
 
 /// Hash files and artifacts, redact metadata, and link evidence to changes.

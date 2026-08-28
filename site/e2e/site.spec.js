@@ -27,6 +27,25 @@ test('empty and error states explain the next step', async ({ page }) => {
   await expect(page.getByRole('status').filter({ hasText: /Add at least one/ })).toBeVisible();
 });
 
+test('keyboard starts at the skip link with no horizontal overflow', async ({ page }) => {
+  await page.goto('/');
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('link', { name: 'Skip to main content' })).toBeFocused();
+  expect(await page.locator('body').evaluate((body) => body.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
+test('offline reload uses the service-worker shell', async ({ page, context }) => {
+  await page.goto('/');
+  await page.waitForFunction(async () => {
+    await navigator.serviceWorker.ready;
+    return Boolean(navigator.serviceWorker.controller);
+  });
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.locator('h1')).toHaveCount(1);
+  expect(await page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+});
+
 test('legal pages have one heading and main landmark', async ({ page }) => {
   for (const route of ['/privacy/', '/terms/']) {
     await page.goto(route);

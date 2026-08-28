@@ -1,4 +1,22 @@
 const allowed = new Set(['version', 'time', 'type', 'path', 'action', 'reason', 'command', 'exit_code', 'files', 'name', 'status', 'artifact', 'task', 'delegate']);
+const actions = new Set(['added', 'modified', 'deleted', 'renamed']);
+const statuses = new Set(['passed', 'failed', 'skipped', 'started', 'completed', 'cancelled']);
+const testStatuses = new Set(['passed', 'failed', 'skipped']);
+const delegationStatuses = new Set(['started', 'completed', 'failed', 'cancelled']);
+
+function nonBlank(value) { return typeof value === 'string' && /\S/.test(value); }
+
+export function isRfc3339(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(Z|[+-](\d{2}):(\d{2}))$/.exec(value || '');
+  if (!match) return false;
+  const [, yearText, monthText, dayText, hourText, minuteText, secondText, , offsetHourText, offsetMinuteText] = match;
+  const [year, month, day, hour, minute, second] = [yearText, monthText, dayText, hourText, minuteText, secondText].map(Number);
+  const leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const monthDays = [31, leapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return month >= 1 && month <= 12 && day >= 1 && day <= monthDays[month - 1]
+    && hour <= 23 && minute <= 59 && second <= 60
+    && (!offsetHourText || (Number(offsetHourText) <= 23 && Number(offsetMinuteText) <= 59));
+}
 
 export function parseEvents(text) {
   const lines = text.split(/\r?\n/).map((line, index) => [line.trim(), index + 1]).filter(([line]) => line);
@@ -6,15 +24,23 @@ export function parseEvents(text) {
   return lines.map(([line, number]) => {
     let event;
     try { event = JSON.parse(line); } catch { throw new Error(`Line ${number} is not valid JSON.`); }
+    if (!event || Array.isArray(event) || typeof event !== 'object') throw new Error(`Line ${number} must be a JSON object.`);
     const unknown = Object.keys(event).find((key) => !allowed.has(key));
     if (unknown) throw new Error(`Line ${number} contains unknown field “${unknown}”.`);
+    if (Object.values(event).some((value) => value === null)) throw new Error(`Line ${number}: event fields cannot be null.`);
     if (event.version !== '1') throw new Error(`Line ${number}: version must be “1”.`);
-    if (!/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|[+-]\d\d:\d\d)$/.test(event.time || '')) throw new Error(`Line ${number}: time must be RFC 3339.`);
+    if (!isRfc3339(event.time)) throw new Error(`Line ${number}: time must be RFC 3339.`);
     if (!['file', 'command', 'test', 'delegation'].includes(event.type)) throw new Error(`Line ${number}: unsupported event type.`);
-    if (event.type === 'file' && (!event.path || !event.reason || !['added', 'modified', 'deleted', 'renamed'].includes(event.action))) throw new Error(`Line ${number}: file events need path, action, and reason.`);
-    if (event.type === 'command' && (!event.command || !Number.isInteger(event.exit_code))) throw new Error(`Line ${number}: command events need command and integer exit_code.`);
-    if (event.type === 'test' && (!event.name || !['passed', 'failed', 'skipped'].includes(event.status))) throw new Error(`Line ${number}: test events need name and a valid status.`);
-    if (event.type === 'delegation' && (!event.task || !event.delegate || !['started', 'completed', 'failed', 'cancelled'].includes(event.status))) throw new Error(`Line ${number}: delegation events need task, delegate, and status.`);
+    if ([event.path, event.reason, event.command, event.name, event.artifact, event.task, event.delegate].some((value) => value !== undefined && !nonBlank(value))) throw new Error(`Line ${number}: event strings cannot be blank.`);
+    if (event.reason?.length > 500) throw new Error(`Line ${number}: reason must be 500 characters or fewer.`);
+    if (event.action !== undefined && !actions.has(event.action)) throw new Error(`Line ${number}: action is not supported.`);
+    if (event.status !== undefined && !statuses.has(event.status)) throw new Error(`Line ${number}: status is not supported.`);
+    if (event.files !== undefined && (!Array.isArray(event.files) || event.files.some((value) => !nonBlank(value)) || new Set(event.files).size !== event.files.length)) throw new Error(`Line ${number}: files must be unique, non-blank paths.`);
+    if (event.exit_code !== undefined && (!Number.isInteger(event.exit_code) || event.exit_code < -2147483648 || event.exit_code > 2147483647)) throw new Error(`Line ${number}: exit_code must be a 32-bit integer.`);
+    if (event.type === 'file' && (!nonBlank(event.path) || !nonBlank(event.reason) || !actions.has(event.action))) throw new Error(`Line ${number}: file events need path, action, and reason.`);
+    if (event.type === 'command' && (!nonBlank(event.command) || !Number.isInteger(event.exit_code))) throw new Error(`Line ${number}: command events need command and integer exit_code.`);
+    if (event.type === 'test' && (!nonBlank(event.name) || !testStatuses.has(event.status))) throw new Error(`Line ${number}: test events need name and a valid status.`);
+    if (event.type === 'delegation' && (!nonBlank(event.task) || !nonBlank(event.delegate) || !delegationStatuses.has(event.status))) throw new Error(`Line ${number}: delegation events need task, delegate, and status.`);
     return event;
   });
 }

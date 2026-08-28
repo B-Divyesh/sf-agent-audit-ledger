@@ -9,22 +9,22 @@
     "version": { "const": "1" },
     "time": { "type": "string", "format": "date-time" },
     "type": { "enum": ["file", "command", "test", "delegation"] },
-    "path": { "type": "string", "minLength": 1 },
+    "path": { "type": "string", "minLength": 1, "pattern": "\\S" },
     "action": { "enum": ["added", "modified", "deleted", "renamed"] },
-    "reason": { "type": "string", "maxLength": 500 },
-    "command": { "type": "string", "minLength": 1 },
-    "exit_code": { "type": "integer" },
-    "files": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
-    "name": { "type": "string", "minLength": 1 },
+    "reason": { "type": "string", "minLength": 1, "maxLength": 500, "pattern": "\\S" },
+    "command": { "type": "string", "minLength": 1, "pattern": "\\S" },
+    "exit_code": { "type": "integer", "minimum": -2147483648, "maximum": 2147483647 },
+    "files": { "type": "array", "items": { "type": "string", "minLength": 1, "pattern": "\\S" }, "uniqueItems": true },
+    "name": { "type": "string", "minLength": 1, "pattern": "\\S" },
     "status": { "enum": ["passed", "failed", "skipped", "started", "completed", "cancelled"] },
-    "artifact": { "type": "string", "minLength": 1 },
-    "task": { "type": "string", "minLength": 1 },
-    "delegate": { "type": "string", "minLength": 1 }
+    "artifact": { "type": "string", "minLength": 1, "pattern": "\\S" },
+    "task": { "type": "string", "minLength": 1, "pattern": "\\S" },
+    "delegate": { "type": "string", "minLength": 1, "pattern": "\\S" }
   },
   "allOf": [
-    { "if": { "properties": { "type": { "const": "file" } } }, "then": { "required": ["path", "action", "reason"] } },
+    { "if": { "properties": { "type": { "const": "file" } } }, "then": { "required": ["path", "action", "reason"], "properties": { "action": { "enum": ["added", "modified", "deleted", "renamed"] } } } },
     { "if": { "properties": { "type": { "const": "command" } } }, "then": { "required": ["command", "exit_code"] } },
-    { "if": { "properties": { "type": { "const": "test" } } }, "then": { "required": ["name", "status"] } },
-    { "if": { "properties": { "type": { "const": "delegation" } } }, "then": { "required": ["task", "delegate", "status"] } }
+    { "if": { "properties": { "type": { "const": "test" } } }, "then": { "required": ["name", "status"], "properties": { "status": { "enum": ["passed", "failed", "skipped"] } } } },
+    { "if": { "properties": { "type": { "const": "delegation" } } }, "then": { "required": ["task", "delegate", "status"], "properties": { "status": { "enum": ["started", "completed", "failed", "cancelled"] } } } }
   ]
 }
