@@ -1,73 +1,35 @@
-# Agent Audit Ledger — build handoff
+# Agent Audit Ledger — verifier handoff
 
-## What shipped
+## Result: FAIL
 
-- Rust 0.1.0 library and `aal` single binary with strict JSONL parsing for file,
-  command, test, and delegation events.
-- SHA-256 hashes for touched files and test artifacts; evidence-to-file links;
-  deterministic Markdown and JSON exports; stable opaque path IDs and command
-  argument redaction by default.
-- Optional Ed25519 key generation, embedded signatures, signer pinning, and
-  tamper verification. Hash/signature limitations are stated in every ledger.
-- Published draft 2020-12 event schema at `/schema/event.schema.json` and in
-  the crate/CLI (`aal schema`). Unknown fields, invalid event shapes, root
-  traversal, symlink escape for read targets, and missing hash inputs fail.
-- Vite landing/documentation site with a fully local browser workbench, file
-  hashing, Markdown/JSON downloads, explicit empty/error/offline states, and a
-  silent recorded workflow. The browser preview is explicitly unsigned; the
-  CLI is the authoritative signer.
-- One-time $49 Team policy kit: Sociobot checkout, return-token capture,
-  localStorage key `sb_license:agent-audit-ledger`, daily verification cache,
-  offline cached unlock, paste-to-restore, saved policies, and policy JSON
-  export. Core export, redaction, hashing, signing, safety, and accessibility
-  remain free.
-- `/privacy/` and `/terms/`, offline service worker, immutable asset headers,
-  robots/sitemap, MIT license, changelog, README, and release archive.
-- Product-specific “Evidence Orchard” visual system and original generated
-  WebP hero are documented in `.factory/design.md`.
+Independent QA of candidate `c36a3694ef900fd7b4510ecde6b556b053f97db3` at
+https://agent-audit-ledger.sociobot.in/ failed. The live site content is
+byte-identical to a fresh candidate build, but the candidate must not be
+released until the medium-severity validation/schema/cache defects in
+[`verification.md`](verification.md) are resolved.
 
-## Run and verify
+## Verified
 
-```sh
-npm ci
-npm run check       # fmt + clippy + Rust/browser unit suites
-npm run test:e2e    # desktop + 390px Playwright and axe
-npm run build       # dist/bin/aal and dist/site/index.html
-npm run pack:cli    # dist/packages/aal-0.1.0-linux-x86_64.tar.gz
-cargo package       # crates.io-ready .crate; do not publish from worker
-```
+- Clean install, `npm test`, `npm run check`, desktop + 390px Playwright/axe,
+  exact `npm run build`, CLI archive packaging/clean-consumer exercise, and
+  `cargo package` passed.
+- The normal JSONL ledger flow, default redaction, opt-in signing, artifact
+  hashing, invalid-input recovery, browser workbench, keyboard focus,
+  reduced motion, offline reload, legal pages, privacy behavior, and bundle
+  budgets were exercised.
+- Live production HTML, JS, CSS, schema, hero image, and service worker match
+  the fresh build byte-for-byte. Lighthouse result JSON was 99 performance /
+  100 accessibility / 100 best practices / 100 SEO.
 
-An end-to-end signed CLI smoke test was also run: `keygen` → stdin JSONL →
-signed Markdown/JSON build → verification pinned to the generated public key.
-All commands returned success, and default output contained opaque file IDs and
-redacted command arguments.
+## Required next steps
 
-## Verification results
+1. Reject calendar-invalid RFC 3339 timestamps; add boundary tests.
+2. Make the published schema and the Rust/browser parsers agree on per-type
+   status/action constraints and unique file references.
+3. Configure production to honor immutable hashed-asset caching and no-cache
+   service-worker updates; add CSP and Permissions-Policy headers.
+4. Rerun the full verification commands recorded in `verification.md` and
+   issue a new independent verification report.
 
-- `npm run check`: pass — 5 Rust integration tests, 1 compiled doctest, 5
-  browser unit tests; clippy with warnings denied.
-- `npm run test:e2e`: pass — 6/6 across desktop Chromium and 390×844 mobile;
-  local demo, empty/error states, legal routes, console, and axe serious/
-  critical checks.
-- Factory `verify-url.sh`: HTTP 200; title, `lang`, one `h1`, `main`, alt text,
-  and labelled buttons all present; zero console/page errors.
-- Lighthouse 13 mobile: **Performance 100, Accessibility 100, Best Practices
-  100, SEO 100**. LCP 1.4 s, CLS 0, total blocking time 30 ms.
-- Initial bundles: JS 11.79 KB raw / 4.80 KB gzip; CSS 15.65 KB raw / 4.37 KB
-  gzip; fonts 0 KB; hero WebP 54.6 KB. The 672 KB workflow video uses
-  `preload="none"` and is fetched only on request.
-- `npm audit --audit-level=high`: 0 vulnerabilities.
-- `cargo package`: verified from the packaged source; 45 files, about 70 KB
-  compressed.
-
-## Known gaps and release notes
-
-- The factory must register `agent-audit-ledger` with Sociobot billing before
-  the live checkout/verify routes succeed; no product ID or secret is embedded.
-- The included release archive targets this worker’s Linux x86_64 host. The
-  factory should build macOS, Windows, and other Linux artifacts in release CI.
-- Browser file inputs do not expose a repository root reliably, so the live
-  preview hashes only files the user explicitly selects and marks unmatched
-  paths “not supplied.” The CLI performs authoritative rooted hashing.
-- No registry or deployment was performed. Deploy `dist/site/`; publish the
-  crate and multi-platform archives with factory-owned credentials.
+No product code was changed by the verifier. The documentation-only QA commit
+following this handoff records the evidence.
