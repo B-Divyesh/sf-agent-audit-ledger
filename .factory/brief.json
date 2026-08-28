@@ -1,0 +1,9 @@
+{
+  "slug": "agent-audit-ledger",
+  "title": "Agent Audit Ledger",
+  "artifact_class": "cli",
+  "user": "Engineers reviewing agent-assisted changes who need an offline, readable record of which files, commands, tests, and delegated tasks produced a patch.",
+  "smallest_useful_product": "A local CLI/library that consumes simple JSONL action events, hashes touched files, links command exit codes and test artifacts, and exports a Markdown/JSON review ledger.",
+  "monetization": "one-time",
+  "constraints": "Prompt/content capture must be opt-in; redact paths and arguments; cryptographic hashes are metadata, not a guarantee of intent; publish an open event schema."
+}
