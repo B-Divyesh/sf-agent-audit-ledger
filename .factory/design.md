@@ -74,6 +74,10 @@ remains fully understandable as a static scene.
 - `site/public/evidence-orchard.webp`: original generated surreal editorial
   hero; wide nocturnal paper-cut landscape, file monoliths, red evidence
   thread, brass moon; no people, interface, logos, text, or watermark.
+- `site/public/agent-audit-ledger-social.webp`: original 1200×630 social
+  preview derived from the project hero with a centered crop. It retains the
+  moon, document monoliths, red evidence thread, and open ledger without
+  adding text or third-party material.
 - Generation prompt: “Surreal editorial paper-cut landscape at night for a
   developer audit tool; warm ivory document monoliths rising from deep
   green-black terrain; a single vermilion thread connects small brass evidence
@@ -84,6 +88,8 @@ remains fully understandable as a static scene.
   watermark.”
 - Generator: factory `gen-image.sh` deployment (factory-image), generated
   2026-08-27. License: original project asset under the repository MIT license.
+- Social export: ImageMagick 6 center crop from the original hero, generated
+  2026-08-30. License: original project asset under the repository MIT license.
 - UI icons are hand-drawn inline SVG using simple product-specific thread,
   seal, and document motifs; decorative icons are hidden from assistive tech.
 - `site/public/ledger-workflow.webm`: original silent 6-second Playwright

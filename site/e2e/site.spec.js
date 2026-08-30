@@ -207,6 +207,22 @@ test('demo and legal pages have accessible landmarks and content', async ({ page
   }
 });
 
+test('every route shows the factory and build identity, with a valid social card', async ({ page }) => {
+  for (const route of ['/', '/demo', '/privacy/', '/terms/', '/404.html']) {
+    await page.goto(route);
+    await expect(page.locator('footer')).toContainText('Built by Param Factory');
+    await expect(page.locator('footer')).toContainText('v0.1.0 · build agent-audit-ledger-repair-7');
+  }
+  await page.goto('/');
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', /agent-audit-ledger-social\.webp$/);
+  await expect(page.locator('meta[name="twitter:image"]')).toHaveAttribute('content', /agent-audit-ledger-social\.webp$/);
+  expect(await page.evaluate(async () => {
+    const image = await fetch('/agent-audit-ledger-social.webp').then((response) => response.blob());
+    const bitmap = await createImageBitmap(image);
+    return { width: bitmap.width, height: bitmap.height };
+  })).toEqual({ width: 1200, height: 630 });
+});
+
 test('the styled 404 document is accessible and links home', async ({ page }) => {
   await page.goto('/404.html');
   await expect(page).toHaveTitle('Page not found — Agent Audit Ledger');

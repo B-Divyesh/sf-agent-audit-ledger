@@ -8,11 +8,16 @@
     <link rel="canonical" href="https://agent-audit-ledger.sociobot.in/">
     <meta property="og:title" content="Agent Audit Ledger — Review agent patches">
     <meta property="og:description" content="Review agent-assisted patches with local, readable evidence from JSONL events.">
-    <meta property="og:image" content="https://agent-audit-ledger.sociobot.in/evidence-orchard.webp">
+    <meta property="og:image" content="https://agent-audit-ledger.sociobot.in/agent-audit-ledger-social.webp">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:type" content="image/webp">
+    <meta property="og:image:alt" content="Paper documents, an open ledger, and a red thread showing linked review evidence.">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Agent Audit Ledger — Review agent patches">
     <meta name="twitter:description" content="Review agent-assisted patches with local, readable evidence from JSONL events.">
-    <meta name="twitter:image" content="https://agent-audit-ledger.sociobot.in/evidence-orchard.webp">
+    <meta name="twitter:image" content="https://agent-audit-ledger.sociobot.in/agent-audit-ledger-social.webp">
+    <meta name="twitter:image:alt" content="Paper documents, an open ledger, and a red thread showing linked review evidence.">
     <title>Agent Audit Ledger — Review agent patches</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="preload" href="/evidence-orchard.webp" as="image" type="image/webp" fetchpriority="high">
@@ -37,18 +42,18 @@
         </div>
         <figure class="hero-art">
           <img src="/evidence-orchard.webp" width="1200" height="800" alt="A surreal paper-cut night landscape where a red thread links document monoliths and brass evidence markers beneath a watchful moon." fetchpriority="high">
-          <figcaption>A patch is a destination. The ledger preserves the path.</figcaption>
+          <figcaption>The ledger links changed files to commands, tests, and delegated work.</figcaption>
         </figure>
       </section>
 
       <section class="problem" aria-labelledby="problem-title">
-        <p class="folio">Review field note · 01</p>
-        <div><h2 id="problem-title">The diff tells you <em>what.</em><br>The ledger tells you <em>how.</em></h2></div>
-        <p>Terminal scrollback disappears. Agent narration is reconstructed after the fact. Another model review adds more guesses. A ledger keeps deterministic evidence close to the files it supports.</p>
+        <p class="folio">Review evidence</p>
+        <div><h2 id="problem-title">Keep patch evidence together.</h2></div>
+        <p>Terminal output disappears. Agent narration changes. The ledger keeps files, commands, tests, and delegated tasks together.</p>
       </section>
 
       <section id="how" class="how" aria-labelledby="how-title">
-        <div class="section-intro"><p class="eyebrow">A three-step chain</p><h2 id="how-title">From action stream to review artifact.</h2><p>The format stays deliberately boring so any agent, hook, shell, or CI job can produce it.</p></div>
+        <div class="section-intro"><p class="eyebrow">How it works</p><h2 id="how-title">Create a review ledger in three steps.</h2><p>Any agent, hook, shell, or CI job can write documented JSONL events.</p></div>
         <ol class="steps">
           <li><span class="step-number">01</span><div class="step-icon" aria-hidden="true">{ }</div><h3>Record JSONL events</h3><p>Write one strict event for a file, command, test, or delegated task. Unknown fields fail loudly.</p></li>
           <li><span class="step-number">02</span><div class="step-icon thread-icon" aria-hidden="true">⌁</div><h3>Hash and connect</h3><p>The CLI hashes current files and artifacts, then links execution evidence to each change.</p></li>
@@ -57,7 +62,7 @@
       </section>
 
       <section id="demo" class="demo" aria-labelledby="demo-title">
-        <div class="section-intro demo-intro"><p class="eyebrow">Local workbench</p><h2 id="demo-title">Build a review ledger in your browser.</h2><p>Paste JSONL below. The workbench processes it locally and does not upload it.</p></div>
+        <div class="section-intro demo-intro"><p class="eyebrow">Browser workbench</p><h2 id="demo-title">Build a review ledger in your browser.</h2><p>Paste JSONL below. The workbench processes it locally and does not upload it.</p></div>
         <div class="demo-grid">
           <div class="input-desk">
             <div class="desk-head"><h3>Action events</h3><div><button id="sample" class="text-button" type="button">Load sample</button><button id="clear" class="text-button" type="button">Clear</button></div></div>
@@ -82,7 +87,7 @@
       </section>
 
       <section id="install" class="install" aria-labelledby="install-title">
-        <div><p class="eyebrow">The real instrument</p><h2 id="install-title">A small binary for the review loop.</h2><p>Run it beside any coding agent. It needs no account or running service.</p></div>
+        <div><p class="eyebrow">CLI usage</p><h2 id="install-title">Build a review ledger from the command line.</h2><p>Run it beside any coding agent. It needs no account or running service.</p></div>
         <div class="terminal" role="region" aria-label="Installation commands" tabindex="0"><div class="terminal-bar"><span></span><span></span><span></span><b>shell</b></div><pre><code><span class="prompt">$</span> cargo install agent-audit-ledger
 
 <span class="prompt">$</span> aal demo
@@ -96,7 +101,7 @@
       </section>
 
       <section id="pricing" class="pricing" aria-labelledby="pricing-title">
-        <div class="section-intro"><p class="eyebrow">Own the workflow</p><h2 id="pricing-title">The ledger is free.<br>Team memory is one-time.</h2><p>Core CLI, browser export, redaction, hashing, and signing stay open. The optional team kit remembers and shares consistent policy presets.</p></div>
+        <div class="section-intro"><p class="eyebrow">Pricing</p><h2 id="pricing-title">Free ledger tools and a one-time team kit.</h2><p>The free CLI and browser tools export, redact, hash, and sign ledgers. The optional team kit saves policy presets.</p></div>
         <div class="price-sheet">
           <div><span class="stamp pro">Team policy kit</span><p class="price"><strong>$49</strong> USD · one-time</p><ul><li>Save named redaction policies locally</li><li>Export policy JSON for team repositories</li><li>Reuse review conventions across projects</li><li>All future v1 policy updates</li></ul></div>
           <div class="buy-column"><a class="button primary" href="https://api.sociobot.in/api/v1/products/agent-audit-ledger/checkout">Buy the team kit</a><p>Sociobot/Dodo is merchant of record. Refunds revoke the license. Read our <a href="/privacy/">privacy policy</a> and <a href="/terms/">terms</a>.</p><details><summary>Have a license? Restore it</summary><form id="restore-form"><label for="license-token">License token</label><input id="license-token" type="text" autocomplete="off"><button class="button ghost" type="submit" aria-label="Verify pasted license">Verify license</button></form></details></div>
@@ -105,9 +110,9 @@
         <div id="pro-panel" class="pro-panel" hidden><div><h3>Saved team policy</h3><p>Store this browser’s current redaction choices under a team-readable name.</p></div><label for="policy-name">Policy name</label><input id="policy-name" type="text" placeholder="Release review"><button id="save-policy" class="button primary" type="button">Save policy locally</button><button id="export-policy" class="button ghost" type="button">Export policy JSON</button></div>
       </section>
 
-      <section class="closing"><p class="eyebrow">Review with evidence</p><blockquote>“The goal is not to prove that an agent meant well. It is to make the work legible enough to judge.”</blockquote><a class="button paper" href="/demo">Try it with sample data</a></section>
+      <section class="closing" aria-labelledby="closing-title"><p class="eyebrow">Sample ledger</p><h2 id="closing-title">Review the sample ledger before using your own events.</h2><p>It contains one changed file and three evidence records.</p><a class="button paper" href="/demo">Try it with sample data</a></section>
     </main>
-    <footer><div><a class="brand footer-brand" href="/" aria-label="Agent Audit Ledger home"><svg aria-hidden="true" viewBox="0 0 40 40"><path d="M7 5h21l5 5v25H7z"/><path d="M27 5v7h6M12 20h16M12 26h10"/><circle cx="12" cy="14" r="2"/></svg><span>Agent Audit Ledger</span></a><p>A portable record for the path behind a patch.</p></div><nav aria-label="Footer navigation"><a href="https://github.com/B-Divyesh/sf-agent-audit-ledger">GitHub</a><a href="/schema/event.schema.json">Event schema</a><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a></nav><p class="copyright">© 2026 Sociobot · MIT licensed</p></footer>
+    <footer><div><a class="brand footer-brand" href="/" aria-label="Agent Audit Ledger home"><svg aria-hidden="true" viewBox="0 0 40 40"><path d="M7 5h21l5 5v25H7z"/><path d="M27 5v7h6M12 20h16M12 26h10"/><circle cx="12" cy="14" r="2"/></svg><span>Agent Audit Ledger</span></a><p>Local evidence for reviewing agent-assisted patches.</p></div><nav aria-label="Footer navigation"><a href="https://github.com/B-Divyesh/sf-agent-audit-ledger">GitHub</a><a href="/schema/event.schema.json">Event schema</a><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a></nav><p class="copyright">© 2026 Sociobot · MIT licensed<br><span>Built by Param Factory · v0.1.0 · build agent-audit-ledger-repair-7</span></p></footer>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
