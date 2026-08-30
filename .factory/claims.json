@@ -42,6 +42,20 @@
     "sandbox": "runs a CLI ledger with a path and leading environment secret, then asserts both are absent from exported JSON"
   },
   {
+    "id": "content-exclusion",
+    "claim": "The CLI rejects prompt fields and never copies source file contents into Markdown or JSON ledgers.",
+    "where": "CLI help, browser workbench, README, privacy policy",
+    "test": "node --test --test-name-pattern='@claim:content-exclusion' site/test/claims.test.js",
+    "sandbox": "builds both exports from a temporary source file containing a unique marker and asserts the marker is absent, then asserts an event with a prompt field is rejected"
+  },
+  {
+    "id": "cli-local-only",
+    "claim": "The CLI demo processes locally without network requests or telemetry.",
+    "where": "CLI help, README, privacy policy",
+    "test": "node --test --test-name-pattern='@claim:cli-local-only' site/test/claims.test.js",
+    "sandbox": "runs the compiled CLI demo with an operating-system network-call guard and asserts that no internet socket or DNS call is attempted"
+  },
+  {
     "id": "open-event-schema",
     "claim": "The event schema is open and available from the CLI.",
     "where": "landing first screen, README",

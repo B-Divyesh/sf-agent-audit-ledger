@@ -178,10 +178,23 @@ test('@claim:offline-reload reloads the isolated demo after the first visit', as
   }
 });
 
-test('legal pages have one heading and main landmark', async ({ page }) => {
-  for (const route of ['/privacy/', '/terms/']) {
+test('demo and legal pages have accessible landmarks and content', async ({ page }) => {
+  for (const route of ['/demo', '/privacy/', '/terms/']) {
     await page.goto(route);
+    if (route === '/demo') await expect(page.locator('#preview')).toContainText('1 changed file');
     await expect(page.locator('h1')).toHaveCount(1);
     await expect(page.locator('main')).toHaveCount(1);
+    const results = await new AxeBuilder({ page }).analyze();
+    expect(results.violations.filter((item) => ['serious', 'critical'].includes(item.impact))).toEqual([]);
   }
+});
+
+test('the styled 404 document is accessible and links home', async ({ page }) => {
+  await page.goto('/404.html');
+  await expect(page).toHaveTitle('Page not found — Agent Audit Ledger');
+  await expect(page.locator('h1')).toHaveText('This page does not exist.');
+  await expect(page.getByRole('link', { name: 'Return home' })).toHaveAttribute('href', '/');
+  expect(await page.locator('body').evaluate((body) => body.scrollWidth <= window.innerWidth)).toBe(true);
+  const results = await new AxeBuilder({ page }).analyze();
+  expect(results.violations.filter((item) => ['serious', 'critical'].includes(item.impact))).toEqual([]);
 });
