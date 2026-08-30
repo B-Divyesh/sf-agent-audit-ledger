@@ -1,5 +1,5 @@
 const CACHE = 'aal-shell-v3';
-const SHELL = ['/', '/demo', '/privacy/', '/terms/', '/schema/event.schema.json', '/evidence-orchard.webp', '/favicon.svg'];
+const SHELL = ['/', '/demo', '/privacy/', '/terms/', '/schema/event.schema.json', '/evidence-orchard.webp', '/favicon.svg', '/demo-route.js'];
 self.addEventListener('install', (event) => event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting())));
 self.addEventListener('activate', (event) => event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)))).then(() => self.clients.claim())));
 self.addEventListener('fetch', (event) => {

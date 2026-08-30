@@ -13,6 +13,10 @@
   border-bottom: 2px solid var(--thread);
 }
 
+html[data-demo-route] #demo-banner[hidden] {
+  display: flex !important;
+}
+
 .demo-banner strong {
   font: 700 13px var(--mono);
   letter-spacing: .05em;

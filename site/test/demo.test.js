@@ -93,9 +93,10 @@ test('the website publishes the CLI event schema byte-for-byte', async () => {
 });
 
 test('static deployment config preserves immutable assets and secure updates', async () => {
-  const [configText, serviceWorker] = await Promise.all([
+  const [configText, serviceWorker, page] = await Promise.all([
     readFile(new URL('../public/staticwebapp.config.json', import.meta.url), 'utf8'),
-    readFile(new URL('../public/sw.js', import.meta.url), 'utf8')
+    readFile(new URL('../public/sw.js', import.meta.url), 'utf8'),
+    readFile(new URL('../index.html', import.meta.url), 'utf8')
   ]);
   const config = JSON.parse(configText);
   assert.match(config.globalHeaders['Content-Security-Policy'], /default-src 'self'/);
@@ -107,4 +108,6 @@ test('static deployment config preserves immutable assets and secure updates', a
   assert.match(headersFor('/sw.js'), /^no-cache/);
   assert.match(serviceWorker, /const CACHE = 'aal-shell-v3'/);
   assert.match(serviceWorker, /'\/demo'/);
+  assert.match(serviceWorker, /'\/demo-route\.js'/);
+  assert.match(page, /<script src="\/demo-route\.js"><\/script>/);
 });
