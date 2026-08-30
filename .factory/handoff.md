@@ -57,8 +57,8 @@ update-path issue discovered during the final audit are fixed and covered.
   12 Rust integration tests, 1 Rust doctest, and 15 Node tests.
 - `npm run build`: pass — `dist/bin/aal` (1,053,672 bytes) and `dist/site`.
 - `npm run pack:cli`: pass — Linux x86-64 archive (527,521 bytes).
-- A second untouched clone ran `cargo package --locked`: pass, 11 files,
-  71.8 KiB unpacked / 19.6 KiB compressed.
+- A final untouched clone ran `cargo package --locked`: pass, 11 files,
+  72.2 KiB unpacked / 19.7 KiB compressed.
 - `cargo install --path <packaged crate> --locked --root <empty dir>`: pass;
   installed binary reported `aal 0.1.0`.
 - A separate consumer crate imported packaged `parse_jsonl`, `build`,
