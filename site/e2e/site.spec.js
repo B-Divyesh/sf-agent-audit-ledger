@@ -166,6 +166,13 @@ test('@claim:offline-reload reloads the isolated demo after the first visit', as
       await navigator.serviceWorker.ready;
       return true;
     });
+    const updateState = await demoPage.evaluate(async () => {
+      const registration = await navigator.serviceWorker.ready;
+      await registration.update();
+      return { active: Boolean(registration.active), scriptURL: registration.active?.scriptURL };
+    });
+    expect(updateState.active).toBe(true);
+    expect(updateState.scriptURL).toMatch(/\/sw\.js$/);
     await demoPage.goto('/demo');
     await demoPage.reload();
     await demoContext.setOffline(true);
