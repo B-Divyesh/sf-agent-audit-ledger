@@ -109,6 +109,8 @@ test('static deployment config preserves immutable assets, secure updates, and r
   assert.match(headersFor('/sw.js'), /^no-cache/);
   assert.equal(config.navigationFallback, undefined);
   assert.equal(config.routes.find((entry) => entry.route === '/demo')?.rewrite, '/index.html');
+  const normalizedRoutes = config.routes.map((entry) => entry.route.replace(/\/+$/, '') || '/');
+  assert.equal(new Set(normalizedRoutes).size, normalizedRoutes.length, 'Azure route normalization must not create duplicates');
   assert.deepEqual(config.responseOverrides['404'], { rewrite: '/404.html' });
   assert.match(serviceWorker, /const CACHE = 'aal-shell-v4'/);
   assert.match(serviceWorker, /'\/demo'/);
