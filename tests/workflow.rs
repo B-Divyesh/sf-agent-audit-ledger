@@ -52,6 +52,33 @@ fn opt_in_metadata_is_included() {
 }
 
 #[test]
+fn default_redaction_never_exposes_a_leading_environment_secret() {
+    let root = tempdir().unwrap();
+    fs::write(root.path().join("file.rs"), "x").unwrap();
+    let events = agent_audit_ledger::parse_jsonl(
+        r#"{"version":"1","time":"2026-08-28T00:00:00Z","type":"file","path":"file.rs","action":"modified","reason":"redaction regression"}
+{"version":"1","time":"2026-08-28T00:01:00Z","type":"command","command":"API_TOKEN=supersecret cargo test","exit_code":0,"files":["file.rs"]}"#,
+    )
+    .unwrap();
+    let manifest = agent_audit_ledger::build(
+        &events,
+        &BuildOptions {
+            root: root.path().into(),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+
+    assert_eq!(manifest.evidence[0].summary, "[command redacted]");
+    assert!(
+        !agent_audit_ledger::to_json(&manifest)
+            .unwrap()
+            .contains("supersecret")
+    );
+    assert!(!agent_audit_ledger::to_markdown(&manifest).contains("supersecret"));
+}
+
+#[test]
 fn rejects_unknown_fields_and_root_escape() {
     let unknown = r#"{"version":"1","time":"2026-08-27T10:12:00Z","type":"file","path":"a","action":"added","reason":"x","prompt":"secret"}"#;
     assert!(
@@ -223,6 +250,19 @@ fn signed_manifest_detects_tampering() {
     };
     agent_audit_ledger::sign(&mut manifest, &private).unwrap();
     agent_audit_ledger::verify(&manifest, Some(&public)).unwrap();
+    let mut fingerprint_tampered = manifest.clone();
+    fingerprint_tampered
+        .signature
+        .as_mut()
+        .unwrap()
+        .public_key_fingerprint = format!("sha256:{}", "0".repeat(64));
+    for pinned_key in [None, Some(public.as_path())] {
+        assert!(
+            agent_audit_ledger::verify(&fingerprint_tampered, pinned_key)
+                .unwrap_err()
+                .contains("fingerprint does not match")
+        );
+    }
     manifest.privacy = "changed".into();
     assert!(agent_audit_ledger::verify(&manifest, Some(&public)).is_err());
 }

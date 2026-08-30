@@ -21,4 +21,16 @@ test('license verify uses the Sociobot product route and caches success', async 
   assert.equal(cached.cached, true);
 });
 
+test('a fresh invalid verdict is reused for one day', async () => {
+  const store = storage(); let calls = 0;
+  const fetcher = async () => { calls += 1; return { ok: true, json: async () => ({ valid: false, reason: 'invalid' }) }; };
+  const first = await verifyLicense('invalid-token', { storage: store, now: 100, fetcher });
+  const second = await verifyLicense('invalid-token', { storage: store, now: 200, fetcher });
+  const third = await verifyLicense('invalid-token', { storage: store, now: 300, fetcher });
+  assert.equal(first.valid, false);
+  assert.equal(second.cached, true);
+  assert.equal(third.cached, true);
+  assert.equal(calls, 1);
+});
+
 test('empty pasted licenses are rejected', () => assert.throws(() => saveLicense('  ', storage()), /Paste/));

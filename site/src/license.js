@@ -16,8 +16,12 @@ export function captureLicense({ location = window.location, history = window.hi
 
 export async function verifyLicense(token, { storage = localStorage, fetcher = fetch, now = Date.now() } = {}) {
   if (!token) return { valid: false, reason: 'missing' };
-  const cached = JSON.parse(storage.getItem(VERDICT_KEY) || 'null');
-  if (cached?.token === token && cached.valid && now - cached.checkedAt < DAY) return { ...cached, cached: true };
+  let cached = null;
+  try { cached = JSON.parse(storage.getItem(VERDICT_KEY) || 'null'); } catch { /* Ignore damaged optional cache data. */ }
+  const cacheAge = now - cached?.checkedAt;
+  const freshCache = cached?.token === token && typeof cached.valid === 'boolean'
+    && Number.isFinite(cacheAge) && cacheAge >= 0 && cacheAge < DAY;
+  if (freshCache) return { ...cached, cached: true };
   try {
     const response = await fetcher(`${API_BASE}/products/${PRODUCT_SLUG}/verify?license=${encodeURIComponent(token)}`);
     if (!response.ok) throw new Error('verification unavailable');

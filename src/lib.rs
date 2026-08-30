@@ -510,6 +510,18 @@ fn redact_command(command: &str, include: bool) -> String {
         .file_name()
         .and_then(|part| part.to_str())
         .unwrap_or(first);
+    // A shell assignment is not an executable name. More generally, only
+    // expose a conservative executable basename: trying to partially parse
+    // shell syntax here risks copying credentials from wrappers or malformed
+    // commands into an artifact that promises argument redaction.
+    if first.contains('=')
+        || !name.chars().enumerate().all(|(index, character)| {
+            character.is_ascii_alphanumeric()
+                || (index > 0 && matches!(character, '.' | '_' | '+' | '-'))
+        })
+    {
+        return "[command redacted]".into();
+    }
     if command.split_whitespace().count() > 1 {
         format!("{name} [arguments redacted]")
     } else {
@@ -625,6 +637,10 @@ pub fn verify(manifest: &Manifest, public_path: Option<&Path>) -> Result<(), Str
         .map_err(|_| "manifest public key is invalid".to_string())?
         .try_into()
         .map_err(|_| "manifest public key is invalid".to_string())?;
+    let expected_fingerprint = format!("sha256:{:x}", Sha256::digest(public_bytes));
+    if signature.public_key_fingerprint != expected_fingerprint {
+        return Err("manifest public key fingerprint does not match the embedded key".into());
+    }
     if let Some(path) = public_path
         && read_key(path, 32)? != public_bytes
     {

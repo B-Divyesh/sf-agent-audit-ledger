@@ -54,7 +54,8 @@
             <label for="events">JSONL event stream</label>
             <textarea id="events" spellcheck="false" rows="13" aria-describedby="event-help" placeholder='{"version":"1","time":"…","type":"file",…}'></textarea>
             <p id="event-help" class="field-help">One JSON object per line. Prompts and file contents are not accepted fields.</p>
-            <label class="file-picker" for="files"><span>Add files for browser hashing <small>(optional)</small></span><input id="files" type="file" multiple><span class="pick-action">Choose files</span></label>
+            <label class="file-picker" for="files"><span>Add files for browser hashing <small>(optional)</small></span><input id="files" type="file" multiple aria-describedby="file-help"><span class="pick-action">Choose files</span></label>
+            <p id="file-help" class="field-help">A unique file name also matches a directory-qualified event path such as <code>src/lib.rs</code>.</p>
             <fieldset><legend>Privacy controls</legend><label class="check"><input id="include-paths" type="checkbox"><span>Include paths in the preview</span></label><label class="check"><input id="include-arguments" type="checkbox"><span>Include full command arguments</span></label></fieldset>
             <button id="build" class="button primary full" type="button">Build the ledger</button>
             <p id="demo-status" class="sr-status" role="status" aria-live="polite">Ready for JSONL events.</p>

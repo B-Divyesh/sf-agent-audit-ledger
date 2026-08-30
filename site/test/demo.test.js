@@ -14,6 +14,31 @@ test('browser demo builds the documented redacted manifest', async () => {
   assert.match(markdown(manifest), /Link evidence/);
 });
 
+test('browser demo redacts a leading environment assignment in full', async () => {
+  const assignmentEvents = `{"version":"1","time":"2026-08-28T00:00:00Z","type":"file","path":"src/lib.rs","action":"modified","reason":"redaction regression"}
+{"version":"1","time":"2026-08-28T00:01:00Z","type":"command","command":"API_TOKEN=supersecret cargo test","exit_code":0,"files":["src/lib.rs"]}`;
+  const manifest = await buildManifest(parseEvents(assignmentEvents));
+  assert.equal(manifest.evidence[0].summary, '[command redacted]');
+  assert.doesNotMatch(JSON.stringify(manifest), /supersecret/);
+  assert.doesNotMatch(markdown(manifest), /supersecret/);
+});
+
+test('browser demo matches one selected basename to a directory-qualified event path', async () => {
+  const selected = {
+    name: 'review.rs',
+    webkitRelativePath: '',
+    arrayBuffer: async () => new TextEncoder().encode('selected source').buffer
+  };
+  const manifest = await buildManifest(parseEvents(events), [selected]);
+  assert.equal(manifest.files[0].state, 'present + hashed');
+  assert.match(manifest.files[0].sha256, /^[a-f0-9]{64}$/);
+
+  const ambiguousEvents = `${events.split('\n')[0]}
+{"version":"1","time":"2026-08-27T10:13:00Z","type":"file","path":"tests/review.rs","action":"modified","reason":"same basename"}`;
+  const ambiguous = await buildManifest(parseEvents(ambiguousEvents), [selected]);
+  assert.equal(ambiguous.files.every((file) => file.state === 'not supplied'), true);
+});
+
 test('browser parser handles empty and invalid states', () => {
   assert.throws(() => parseEvents(''), /at least one/);
   assert.throws(() => parseEvents('{bad'), /Line 1/);

@@ -7,6 +7,7 @@
     "dev": "vite --config site/vite.config.js",
     "test": "cargo test --all && node --test site/test/*.test.js",
     "test:e2e": "playwright test -c site/playwright.config.js",
+    "test:billing:live": "node --test site/live-test/billing.test.js",
     "build:cli": "cargo build --release && mkdir -p dist/bin && cp target/release/aal dist/bin/aal",
     "sync:schema": "node scripts/sync-schema.mjs",
     "build:site": "npm run sync:schema && vite build --config site/vite.config.js",

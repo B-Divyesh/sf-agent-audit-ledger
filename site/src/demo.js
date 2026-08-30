@@ -77,16 +77,44 @@ function randomOpaqueId(kind) {
   return `${kind}:${[...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('')}`;
 }
 
+function safeCommandSummary(command) {
+  const tokens = command.trim().split(/\s+/);
+  const first = tokens[0] || '';
+  const name = first.split('/').pop();
+  // Do not interpret shell syntax. A strict executable basename is useful;
+  // anything else is safer to hide in full under the default privacy policy.
+  if (first.includes('=') || !/^[A-Za-z0-9][A-Za-z0-9._+-]*$/.test(name)) return '[command redacted]';
+  return `${name}${tokens.length > 1 ? ' [arguments redacted]' : ''}`;
+}
+
+function normalizedPath(value) {
+  return value.replaceAll('\\', '/').replace(/^\.\//, '');
+}
+
+function basename(value) {
+  return normalizedPath(value).split('/').pop();
+}
+
 export async function buildManifest(events, selectedFiles = [], options = {}) {
   const includePaths = Boolean(options.includePaths);
   const includeArguments = Boolean(options.includeArguments);
-  const fileMap = new Map(selectedFiles.map((file) => [file.webkitRelativePath || file.name, file]));
+  const fileEntries = selectedFiles.map((file) => [normalizedPath(file.webkitRelativePath || file.name), file]);
+  const eventPaths = events.filter((item) => item.type === 'file').map((item) => normalizedPath(item.path));
+  const selectedFile = (eventPath) => {
+    const normalizedEventPath = normalizedPath(eventPath);
+    const exact = fileEntries.find(([name]) => name === normalizedEventPath || name.endsWith(`/${normalizedEventPath}`));
+    if (exact) return exact[1];
+    const wantedBasename = basename(normalizedEventPath);
+    const uniqueEventName = eventPaths.filter((path) => basename(path) === wantedBasename).length === 1;
+    const basenameMatches = fileEntries.filter(([name]) => basename(name) === wantedBasename);
+    return uniqueEventName && basenameMatches.length === 1 ? basenameMatches[0][1] : undefined;
+  };
   const records = [];
   const refs = new Map();
   for (const event of events.filter((item) => item.type === 'file')) {
     if (refs.has(event.path)) throw new Error(`File event for “${event.path}” is duplicated.`);
     const id = randomOpaqueId('file');
-    const supplied = fileMap.get(event.path) || [...fileMap.entries()].find(([name]) => name.endsWith(`/${event.path}`))?.[1];
+    const supplied = selectedFile(event.path);
     const deleted = event.action === 'deleted';
     const hash = !deleted && supplied ? await sha256(await supplied.arrayBuffer()) : '';
     records.push({ id, path: includePaths ? event.path : id, action: event.action, reason: event.reason, sha256: hash, state: deleted ? 'deleted' : supplied ? 'present + hashed' : 'not supplied', evidence: [] });
@@ -106,7 +134,7 @@ export async function buildManifest(events, selectedFiles = [], options = {}) {
     const id = `evidence-${String(evidenceNumber).padStart(3, '0')}`;
     let summary = event.name || event.task || event.command;
     let status = event.status || (event.exit_code === 0 ? 'passed' : 'failed');
-    if (event.type === 'command' && !includeArguments) summary = `${event.command.trim().split(/\s+/)[0].split('/').pop()}${event.command.trim().includes(' ') ? ' [arguments redacted]' : ''}`;
+    if (event.type === 'command' && !includeArguments) summary = safeCommandSummary(event.command);
     if (event.type === 'delegation') summary = `${event.task} — ${event.delegate}`;
     evidence.push({ id, type: event.type, time: event.time, summary, status, ...(Number.isInteger(event.exit_code) ? { exit_code: event.exit_code } : {}), files: fileRefs });
     for (const record of records) if (fileRefs.includes(record.id)) record.evidence.push(id);
