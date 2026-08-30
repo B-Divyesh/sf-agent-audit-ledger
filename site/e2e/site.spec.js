@@ -81,6 +81,17 @@ test('file chooser focus is visible and standalone targets are at least 44px', a
   expect(undersized).toEqual([]);
 });
 
+test('reduced motion removes smooth scrolling and movement transitions', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  const styles = await page.evaluate(() => ({
+    scrollBehavior: getComputedStyle(document.documentElement).scrollBehavior,
+    transitionDuration: getComputedStyle(document.querySelector('.button')).transitionDuration
+  }));
+  expect(styles.scrollBehavior).toBe('auto');
+  expect(styles.transitionDuration.split(',').every((duration) => Number.parseFloat(duration) <= 0.00001)).toBe(true);
+});
+
 test('a cached invalid license is not rechecked on reload', async ({ page }) => {
   let verificationRequests = 0;
   page.on('request', (request) => {
