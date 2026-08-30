@@ -49,6 +49,14 @@
   font: 14px/1.35 var(--display);
 }
 
+.demo-grid > * {
+  min-width: 0;
+}
+
+.file-list code {
+  overflow-wrap: anywhere;
+}
+
 @media (width <= 620px) {
   .demo-banner {
     align-items: flex-start;

@@ -103,6 +103,7 @@ test('@claim:demo-sandbox opens a completed isolated sample ledger from the firs
   await expect(page.getByText('Demo — sample data, nothing is saved')).toBeVisible();
   await expect(page.locator('#preview')).toContainText('1 changed file');
   await expect(page.locator('#preview')).toContainText('Evidence3');
+  expect(await page.locator('body').evaluate((body) => body.scrollWidth <= window.innerWidth)).toBe(true);
   expect(await page.locator('#events').inputValue()).toContain('"task":"Check path redaction"');
   const beforeReset = await page.evaluate(() => ({
     demo: localStorage.getItem('demo:agent-audit-ledger:workbench'),
@@ -126,6 +127,10 @@ test('@claim:demo-sandbox opens a completed isolated sample ledger from the firs
   }));
   expect(afterLeave.demo).toBeNull();
   expect(afterLeave.real).toContain('Real policy');
+
+  await page.goto('/?demo=1');
+  await expect(page.getByText('Demo — sample data, nothing is saved')).toBeVisible();
+  await expect(page.locator('#preview')).toContainText('1 changed file');
 });
 
 test('@claim:browser-local-only demo requests stay on the product origin', async ({ page }) => {
