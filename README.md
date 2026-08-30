@@ -76,6 +76,13 @@ npm run pack:cli    # release archives -> dist/packages
 The static documentation and local demo live in `site/`. `npm run build:site`
 outputs exactly to `dist/site`. There are no runtime third-party scripts,
 fonts, analytics, or network calls except an explicit license verification.
+In the browser demo, one uniquely named selected file can match a
+directory-qualified event path such as `src/lib.rs`; ambiguous basenames stay
+unmatched rather than risking the wrong hash.
+
+Run `npm run test:e2e` for desktop and 390 px browser coverage. Run
+`npm run test:billing:live` to confirm that the advertised purchase route
+redirects to Sociobot's hosted checkout.
 
 ## Deploy
 

@@ -93,7 +93,11 @@ test('the website publishes the CLI event schema byte-for-byte', async () => {
 });
 
 test('static deployment config preserves immutable assets and secure updates', async () => {
-  const config = JSON.parse(await readFile(new URL('../public/staticwebapp.config.json', import.meta.url), 'utf8'));
+  const [configText, serviceWorker] = await Promise.all([
+    readFile(new URL('../public/staticwebapp.config.json', import.meta.url), 'utf8'),
+    readFile(new URL('../public/sw.js', import.meta.url), 'utf8')
+  ]);
+  const config = JSON.parse(configText);
   assert.match(config.globalHeaders['Content-Security-Policy'], /default-src 'self'/);
   assert.match(config.globalHeaders['Content-Security-Policy'], /connect-src 'self' https:\/\/api\.sociobot\.in/);
   assert.match(config.globalHeaders['Permissions-Policy'], /camera=\(\)/);
@@ -101,4 +105,5 @@ test('static deployment config preserves immutable assets and secure updates', a
   assert.equal(headersFor('/assets/*'), 'public, max-age=31536000, immutable');
   assert.equal(headersFor('/evidence-orchard.webp'), 'public, max-age=31536000, immutable');
   assert.match(headersFor('/sw.js'), /^no-cache/);
+  assert.match(serviceWorker, /const CACHE = 'aal-shell-v2'/);
 });
