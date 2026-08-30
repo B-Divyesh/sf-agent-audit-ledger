@@ -1,6 +1,51 @@
 use agent_audit_ledger::{BuildOptions, Manifest};
 use std::fs;
+use std::process::Command;
 use tempfile::tempdir;
+
+#[test]
+fn cli_demo_builds_a_complete_isolated_sample_workspace() {
+    let output = Command::new(env!("CARGO_BIN_EXE_aal"))
+        .arg("demo")
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let prefix = "Demo ledger written to ";
+    let directory = stdout
+        .lines()
+        .find_map(|line| line.strip_prefix(prefix))
+        .expect("demo prints its output directory");
+    let directory = std::path::PathBuf::from(directory);
+    assert!(directory.starts_with(std::env::temp_dir()));
+    assert!(directory.join("actions.jsonl").is_file());
+    assert!(directory.join("src/review.rs").is_file());
+    assert!(directory.join("test-results/review-ledger.txt").is_file());
+    let ledger = fs::read_to_string(directory.join("audit.json")).unwrap();
+    assert!(ledger.contains("paths redacted"));
+    assert!(ledger.contains("review ledger"));
+    fs::remove_dir_all(directory).unwrap();
+
+    let alias = Command::new(env!("CARGO_BIN_EXE_aal"))
+        .arg("--demo")
+        .output()
+        .unwrap();
+    assert!(
+        alias.status.success(),
+        "{}",
+        String::from_utf8_lossy(&alias.stderr)
+    );
+    let alias_stdout = String::from_utf8(alias.stdout).unwrap();
+    let alias_directory = alias_stdout
+        .lines()
+        .find_map(|line| line.strip_prefix(prefix))
+        .expect("--demo prints its output directory");
+    fs::remove_dir_all(alias_directory).unwrap();
+}
 
 #[test]
 fn documented_example_builds_and_redacts() {

@@ -1,0 +1,4 @@
+{"version":"1","time":"2026-08-27T10:12:00Z","type":"file","path":"src/review.rs","action":"modified","reason":"Link each patch change to its check"}
+{"version":"1","time":"2026-08-27T10:14:00Z","type":"command","command":"cargo test --all","exit_code":0,"files":["src/review.rs"]}
+{"version":"1","time":"2026-08-27T10:15:00Z","type":"test","name":"review ledger","status":"passed","artifact":"test-results/review-ledger.txt","files":["src/review.rs"]}
+{"version":"1","time":"2026-08-27T10:16:00Z","type":"delegation","task":"Check path redaction","delegate":"review-agent","status":"completed","files":["src/review.rs"]}

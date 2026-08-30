@@ -1,5 +1,6 @@
 use agent_audit_ledger::{BuildOptions, Manifest};
 use clap::{Parser, Subcommand};
+use rand::{RngCore, rngs::OsRng};
 use serde_json::json;
 use std::fs;
 use std::io::{self, Read};
@@ -13,8 +14,11 @@ use std::path::{Path, PathBuf};
     long_about = "Agent Audit Ledger turns tool-neutral JSONL action events into portable Markdown and JSON review artifacts. Processing is local; prompts and file contents are never copied.\n\nPaths and command arguments are redacted by default. Opt in only when reviewers need them."
 )]
 struct Cli {
+    /// Run the bundled sample in a new temporary directory
+    #[arg(long, global = true)]
+    demo: bool,
     #[command(subcommand)]
-    command: Command,
+    command: Option<Command>,
 }
 
 #[derive(Subcommand)]
@@ -70,6 +74,12 @@ enum Command {
         #[arg(long)]
         json_output: bool,
     },
+    /// Build a ledger from bundled sample events in a temporary directory
+    Demo {
+        /// Print the output paths as JSON
+        #[arg(long)]
+        json_output: bool,
+    },
     /// Print the open event JSON Schema
     Schema,
 }
@@ -82,7 +92,17 @@ fn main() {
 }
 
 fn run() -> Result<(), String> {
-    match Cli::parse().command {
+    let cli = Cli::parse();
+    if cli.demo {
+        if cli.command.is_some() {
+            return Err("use either --demo or the demo command, not both".into());
+        }
+        return run_demo(false);
+    }
+    match cli
+        .command
+        .ok_or_else(|| "choose a command; run aal --help for usage".to_string())?
+    {
         Command::Build {
             input,
             markdown,
@@ -181,7 +201,82 @@ fn run() -> Result<(), String> {
                 );
             }
         }
+        Command::Demo { json_output } => run_demo(json_output)?,
         Command::Schema => print!("{}", agent_audit_ledger::EVENT_SCHEMA),
+    }
+    Ok(())
+}
+
+const DEMO_EVENTS: &str = include_str!("../examples/review-actions.jsonl");
+const DEMO_SOURCE: &str = "pub fn linked_evidence_count(events: usize) -> usize {\n    events\n}\n";
+const DEMO_ARTIFACT: &str = "review-ledger sample: 18 tests passed\n";
+
+/// Create a complete, disposable review workspace and render its sample ledger.
+/// Nothing is read from or written to the caller's current directory.
+fn run_demo(json_output: bool) -> Result<(), String> {
+    let mut nonce = [0_u8; 8];
+    OsRng.fill_bytes(&mut nonce);
+    let directory = std::env::temp_dir().join(format!(
+        "agent-audit-ledger-demo-{}-{}",
+        std::process::id(),
+        nonce
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect::<String>()
+    ));
+    fs::create_dir_all(directory.join("src"))
+        .map_err(|error| format!("create demo directory: {error}"))?;
+    fs::create_dir_all(directory.join("test-results"))
+        .map_err(|error| format!("create demo directory: {error}"))?;
+    fs::write(directory.join("actions.jsonl"), DEMO_EVENTS)
+        .map_err(|error| format!("write demo events: {error}"))?;
+    fs::write(directory.join("src/review.rs"), DEMO_SOURCE)
+        .map_err(|error| format!("write demo source: {error}"))?;
+    fs::write(
+        directory.join("test-results/review-ledger.txt"),
+        DEMO_ARTIFACT,
+    )
+    .map_err(|error| format!("write demo artifact: {error}"))?;
+
+    let events = agent_audit_ledger::parse_jsonl(DEMO_EVENTS)?;
+    let manifest = agent_audit_ledger::build(
+        &events,
+        &BuildOptions {
+            root: directory.clone(),
+            ..Default::default()
+        },
+    )?;
+    let markdown_path = directory.join("audit.md");
+    let json_path = directory.join("audit.json");
+    atomic_write(
+        &markdown_path,
+        agent_audit_ledger::to_markdown(&manifest).as_bytes(),
+    )?;
+    atomic_write(
+        &json_path,
+        agent_audit_ledger::to_json(&manifest)?.as_bytes(),
+    )?;
+
+    if json_output {
+        println!(
+            "{}",
+            json!({
+                "ok": true,
+                "demo_dir": directory,
+                "input": directory.join("actions.jsonl"),
+                "markdown": markdown_path,
+                "json": json_path,
+                "files": manifest.files.len(),
+                "evidence": manifest.evidence.len()
+            })
+        );
+    } else {
+        println!("Demo ledger written to {}", directory.display());
+        println!(
+            "Sample input: {}",
+            directory.join("actions.jsonl").display()
+        );
+        println!("Open audit.md or audit.json to review the generated ledger.");
     }
     Ok(())
 }

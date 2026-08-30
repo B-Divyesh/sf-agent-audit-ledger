@@ -1,0 +1,58 @@
+[
+  {
+    "id": "demo-sandbox",
+    "claim": "Try a completed browser ledger with sample data without setup.",
+    "where": "landing first screen, /demo, README",
+    "test": "npm run test:e2e -- --grep '@claim:demo-sandbox'",
+    "sandbox": "fresh browser context opens /demo; asserts the seeded ledger, demo banner, reset, and Start for real isolation"
+  },
+  {
+    "id": "browser-local-only",
+    "claim": "The browser workbench processes demo data locally and does not upload it.",
+    "where": "browser workbench, privacy policy",
+    "test": "npm run test:e2e -- --grep '@claim:browser-local-only'",
+    "sandbox": "fresh browser context records every request while loading and building /demo; only the product origin is allowed"
+  },
+  {
+    "id": "offline-reload",
+    "claim": "Works offline after the first visit.",
+    "where": "landing first screen, privacy policy, README",
+    "test": "npm run test:e2e -- --grep '@claim:offline-reload'",
+    "sandbox": "dedicated browser context loads /demo, activates the service worker, goes offline, and reloads the seeded ledger"
+  },
+  {
+    "id": "exports-markdown-json",
+    "claim": "Exports the ledger as Markdown and JSON.",
+    "where": "CLI section, README",
+    "test": "npm run test:e2e -- --grep '@claim:exports-markdown-json'",
+    "sandbox": "fresh /demo context downloads both exports from the seeded ledger"
+  },
+  {
+    "id": "cli-demo",
+    "claim": "aal demo creates a redacted, hashed sample ledger in a new temporary directory.",
+    "where": "CLI section, README, .factory/demo.md",
+    "test": "node --test --test-name-pattern='@claim:cli-demo' site/test/claims.test.js",
+    "sandbox": "runs the shipped command from a clean checkout and asserts its JSON-reported sample input and both ledger outputs"
+  },
+  {
+    "id": "redaction-default",
+    "claim": "Paths and command arguments are redacted by default.",
+    "where": "landing first screen, README, browser workbench",
+    "test": "node --test --test-name-pattern='@claim:redaction-default' site/test/claims.test.js",
+    "sandbox": "runs a CLI ledger with a path and leading environment secret, then asserts both are absent from exported JSON"
+  },
+  {
+    "id": "open-event-schema",
+    "claim": "The event schema is open and available from the CLI.",
+    "where": "landing first screen, README",
+    "test": "node --test --test-name-pattern='@claim:open-event-schema' site/test/claims.test.js",
+    "sandbox": "runs aal schema and validates the four supported event types"
+  },
+  {
+    "id": "manifest-signing",
+    "claim": "A signed ledger rejects later changes.",
+    "where": "workflow section, README, terms",
+    "test": "node --test --test-name-pattern='@claim:manifest-signing' site/test/claims.test.js",
+    "sandbox": "creates and signs a manifest, changes it, and asserts verification fails"
+  }
+]

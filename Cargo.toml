@@ -6,7 +6,7 @@ description = "Offline evidence manifests for agent-assisted code review"
 license = "MIT"
 repository = "https://github.com/B-Divyesh/sf-agent-audit-ledger"
 readme = "README.md"
-include = ["src/**", "tests/**", "schema/**", "Cargo.toml", "Cargo.lock", "README.md", "LICENSE", "CHANGELOG.md"]
+include = ["src/**", "tests/**", "examples/**", "schema/**", "Cargo.toml", "Cargo.lock", "README.md", "LICENSE", "CHANGELOG.md"]
 
 [[bin]]
 name = "aal"

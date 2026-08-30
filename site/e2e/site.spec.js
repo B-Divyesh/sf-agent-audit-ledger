@@ -10,7 +10,7 @@ test('home is accessible and builds a local ledger', async ({ page }) => {
   page.on('console', (message) => { if (message.type() === 'error') consoleErrors.push(message.text()); });
   await page.goto('/');
   await expect(page.locator('h1')).toHaveCount(1);
-  await page.getByRole('button', { name: 'Load example' }).click();
+  await page.getByRole('button', { name: 'Load sample' }).click();
   await page.getByRole('button', { name: 'Build the ledger' }).click();
   await expect(page.getByRole('status').filter({ hasText: /Ledger ready/ })).toBeVisible();
   await expect(page.locator('#preview')).toContainText('Evidence3');
@@ -37,7 +37,7 @@ test('browser workbench rejects evidence not linked to a changed file', async ({
 });
 
 test('default browser redaction hides a leading environment secret', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/demo');
   await page.locator('#events').fill(`{"version":"1","time":"2026-08-28T00:00:00Z","type":"file","path":"src/lib.rs","action":"modified","reason":"redaction regression"}
 {"version":"1","time":"2026-08-28T00:01:00Z","type":"command","command":"API_TOKEN=supersecret cargo test","exit_code":0,"files":["src/lib.rs"]}`);
   await page.getByRole('button', { name: 'Build the ledger' }).click();
@@ -94,16 +94,83 @@ test('a cached invalid license is not rechecked on reload', async ({ page }) => 
   expect(verificationRequests).toBe(1);
 });
 
-test('offline reload uses the service-worker shell', async ({ page, context }) => {
-  await page.goto('/');
-  await page.waitForFunction(async () => {
-    await navigator.serviceWorker.ready;
-    return Boolean(navigator.serviceWorker.controller);
-  });
-  await context.setOffline(true);
-  await page.reload();
-  await expect(page.locator('h1')).toHaveCount(1);
-  expect(await page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+test('@claim:demo-sandbox opens a completed isolated sample ledger from the first screen', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('aal:team-policy', JSON.stringify({ name: 'Real policy' })));
+  await page.goto('/demo');
+  await expect(page).toHaveTitle('Demo — Agent Audit Ledger');
+  await expect(page.locator('h1')).toHaveText(/Review agent-assisted patches with evidence/);
+  await expect(page.getByRole('link', { name: 'Try it with sample data' }).first()).toBeVisible();
+  await expect(page.getByText('Demo — sample data, nothing is saved')).toBeVisible();
+  await expect(page.locator('#preview')).toContainText('1 changed file');
+  await expect(page.locator('#preview')).toContainText('Evidence3');
+  expect(await page.locator('#events').inputValue()).toContain('"task":"Check path redaction"');
+  const beforeReset = await page.evaluate(() => ({
+    demo: localStorage.getItem('demo:agent-audit-ledger:workbench'),
+    real: localStorage.getItem('aal:team-policy')
+  }));
+  expect(beforeReset.demo).toBeTruthy();
+  expect(beforeReset.real).toContain('Real policy');
+
+  await page.locator('#events').fill('not sample data');
+  await page.getByRole('button', { name: 'Reset demo' }).click();
+  await expect(page.locator('#preview')).toContainText('1 changed file');
+  await expect(page.locator('#events')).toHaveValue(/"version":"1"/);
+
+  await Promise.all([
+    page.waitForURL(/\/$/),
+    page.getByRole('link', { name: 'Start for real' }).click()
+  ]);
+  const afterLeave = await page.evaluate(() => ({
+    demo: localStorage.getItem('demo:agent-audit-ledger:workbench'),
+    real: localStorage.getItem('aal:team-policy')
+  }));
+  expect(afterLeave.demo).toBeNull();
+  expect(afterLeave.real).toContain('Real policy');
+});
+
+test('@claim:browser-local-only demo requests stay on the product origin', async ({ page }) => {
+  const origins = new Set();
+  page.on('request', (request) => origins.add(new URL(request.url()).origin));
+  await page.goto('/demo');
+  await expect(page.locator('#preview')).toContainText('1 changed file');
+  expect([...origins]).toEqual([new URL(page.url()).origin]);
+});
+
+test('@claim:exports-markdown-json exports both ledger formats from the sample demo', async ({ page }) => {
+  await page.goto('/demo');
+  await expect(page.locator('#preview')).toContainText('1 changed file');
+  const [markdownDownload] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Export MD' }).click()
+  ]);
+  expect(markdownDownload.suggestedFilename()).toBe('agent-audit-ledger.md');
+  const [jsonDownload] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Export JSON' }).click()
+  ]);
+  expect(jsonDownload.suggestedFilename()).toBe('agent-audit-ledger.json');
+  expect(await jsonDownload.createReadStream()).toBeTruthy();
+});
+
+test('@claim:offline-reload reloads the isolated demo after the first visit', async ({ browser }) => {
+  const demoContext = await browser.newContext();
+  try {
+    const demoPage = await demoContext.newPage();
+    await demoPage.goto('/');
+    await demoPage.waitForFunction(async () => {
+      await navigator.serviceWorker.ready;
+      return true;
+    });
+    await demoPage.goto('/demo');
+    await demoPage.reload();
+    await demoContext.setOffline(true);
+    await demoPage.reload();
+    await expect(demoPage.locator('h1')).toHaveCount(1);
+    await expect(demoPage.locator('#preview')).toContainText('1 changed file');
+    expect(await demoPage.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+  } finally {
+    await demoContext.close();
+  }
 });
 
 test('legal pages have one heading and main landmark', async ({ page }) => {

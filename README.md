@@ -1,9 +1,8 @@
 # Agent Audit Ledger
 
 Agent Audit Ledger (`aal`) turns tool-neutral JSONL action events into a compact,
-offline review artifact. It connects changed files to reasons, commands, test
-results, artifacts, and delegated work without collecting prompts or sending
-telemetry.
+offline review artifact. It helps engineers reviewing agent-assisted patches see
+which files, commands, tests, and delegated tasks produced a change.
 
 It is for engineers reviewing agent-assisted patches who need to answer “what
 changed, why, and what was verified?” without replaying terminal scrollback.
@@ -15,6 +14,25 @@ Download a release binary, or install from source with Rust 1.85+:
 ```sh
 cargo install agent-audit-ledger
 ```
+
+## Try the shipped sample
+
+Run a complete, isolated sample with no setup:
+
+~~~sh
+aal demo
+# or: aal --demo
+~~~
+
+The command creates a new temporary directory, builds a redacted and hashed
+ledger from [examples/review-actions.jsonl](examples/review-actions.jsonl),
+and prints where it wrote audit.md and audit.json. It never reads from or
+writes to your current repository. Use aal demo --json-output in scripts.
+
+The browser workbench has the same one-click sample at
+https://agent-audit-ledger.sociobot.in/demo (or /demo when running locally).
+Its persistent banner offers **Reset demo** and **Start for real**; the sample
+uses the separate demo:agent-audit-ledger:workbench storage key.
 
 ## Usage
 
@@ -75,8 +93,9 @@ npm run pack:cli    # release archives -> dist/packages
 
 The static documentation and local demo live in `site/`. `npm run build:site`
 outputs exactly to `dist/site`. There are no runtime third-party scripts,
-fonts, analytics, or network calls except an explicit license verification.
-In the browser demo, one uniquely named selected file can match a
+fonts, or analytics. The browser workbench processes its event text and selected
+files locally; an explicit license verification is the only optional product
+API call. In the browser demo, one uniquely named selected file can match a
 directory-qualified event path such as `src/lib.rs`; ambiguous basenames stay
 unmatched rather than risking the wrong hash.
 
@@ -93,10 +112,11 @@ Permissions-Policy. The factory publishes release archives from
 
 ## Privacy and security
 
-All ledger processing is local. The website demo processes selected files in
+Ledger processing is local. The website workbench processes selected files in
 the browser. License tokens and paid policy presets are stored in localStorage;
-see `/privacy/` and `/terms/`. Please report security issues privately to the
-repository owner rather than attaching sensitive ledgers to a public issue.
+the separate demo state is discarded with **Start for real**. See `/privacy/`
+and `/terms/`. Please report security issues privately to the repository owner
+rather than attaching sensitive ledgers to a public issue.
 
 ## License
 

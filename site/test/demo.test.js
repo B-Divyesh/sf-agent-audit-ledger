@@ -105,5 +105,6 @@ test('static deployment config preserves immutable assets and secure updates', a
   assert.equal(headersFor('/assets/*'), 'public, max-age=31536000, immutable');
   assert.equal(headersFor('/evidence-orchard.webp'), 'public, max-age=31536000, immutable');
   assert.match(headersFor('/sw.js'), /^no-cache/);
-  assert.match(serviceWorker, /const CACHE = 'aal-shell-v2'/);
+  assert.match(serviceWorker, /const CACHE = 'aal-shell-v3'/);
+  assert.match(serviceWorker, /'\/demo'/);
 });

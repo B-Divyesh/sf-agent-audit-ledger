@@ -4,6 +4,9 @@ All notable changes follow semantic versioning.
 
 ## Unreleased
 
+- Add a one-click isolated sample for the browser workbench and the aal demo
+  command, with a bundled JSONL fixture and generated temporary workspace.
+- Add a tested claims manifest and demo-sandbox documentation.
 - Reject evidence references that have no corresponding changed-file event in
   both the CLI and browser workbench.
 - Replace deterministic path-derived IDs with fresh per-ledger random opaque
