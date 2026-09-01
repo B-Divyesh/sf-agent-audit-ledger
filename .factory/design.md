@@ -78,6 +78,11 @@ remains fully understandable as a static scene.
   preview derived from the project hero with a centered crop. It retains the
   moon, document monoliths, red evidence thread, and open ledger without
   adding text or third-party material.
+- `site/public/apple-touch-icon.png`: 180×180 raster export of the hand-drawn
+  product favicon, rendered locally in Chromium on 2026-09-01. It uses the
+  ledger page, brass outline, paper marks, and red evidence seal from the
+  product identity. License: original project asset under the repository MIT
+  license.
 - Generation prompt: “Surreal editorial paper-cut landscape at night for a
   developer audit tool; warm ivory document monoliths rising from deep
   green-black terrain; a single vermilion thread connects small brass evidence

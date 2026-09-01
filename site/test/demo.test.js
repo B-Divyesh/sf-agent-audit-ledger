@@ -112,11 +112,12 @@ test('static deployment config preserves immutable assets, secure updates, and r
   const normalizedRoutes = config.routes.map((entry) => entry.route.replace(/\/+$/, '') || '/');
   assert.equal(new Set(normalizedRoutes).size, normalizedRoutes.length, 'Azure route normalization must not create duplicates');
   assert.deepEqual(config.responseOverrides['404'], { rewrite: '/404.html' });
-  assert.match(serviceWorker, /const CACHE = 'aal-shell-v4'/);
+  assert.match(serviceWorker, /const CACHE = 'aal-shell-v5'/);
   assert.match(serviceWorker, /'\/demo'/);
   assert.match(serviceWorker, /'\/404\.html'/);
   assert.match(serviceWorker, /status: 404/);
   assert.match(serviceWorker, /'\/demo-route\.js'/);
+  assert.match(serviceWorker, /'\/apple-touch-icon\.png'/);
   assert.match(page, /<script src="\/demo-route\.js"><\/script>/);
   assert.equal((notFoundPage.match(/<h1[ >]/g) || []).length, 1);
   assert.match(notFoundPage, /<main id="main"/);

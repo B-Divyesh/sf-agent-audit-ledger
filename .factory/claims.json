@@ -14,6 +14,13 @@
     "sandbox": "fresh browser context records every request while loading and building /demo; only the product origin is allowed"
   },
   {
+    "id": "browser-file-hashing",
+    "claim": "The browser workbench hashes a selected file locally and links it to its file event.",
+    "where": "browser workbench, pricing, README",
+    "test": "npm run test:e2e -- --grep '@claim:browser-file-hashing'",
+    "sandbox": "fresh browser context selects a uniquely named file for a directory-qualified event and asserts a SHA-256 hash is linked"
+  },
+  {
     "id": "offline-reload",
     "claim": "Works offline after the first visit.",
     "where": "landing first screen, privacy policy, README",
@@ -68,5 +75,47 @@
     "where": "workflow section, README, terms",
     "test": "node --test --test-name-pattern='@claim:manifest-signing' site/test/claims.test.js",
     "sandbox": "creates and signs a manifest, changes it, and asserts verification fails"
+  },
+  {
+    "id": "team-policy-workflow",
+    "claim": "The Team policy kit saves one named redaction policy locally, reuses it after reload, and exports schema-versioned JSON.",
+    "where": "pricing, privacy policy, terms",
+    "test": "npm run test:e2e -- --grep '@claim:team-policy-workflow'",
+    "sandbox": "fresh browser context seeds a cached valid product license, saves both redaction choices, reloads them, and validates the downloaded policy JSON"
+  },
+  {
+    "id": "license-daily-verification",
+    "claim": "After a completed Team license check, the saved verdict prevents another verification request for 24 hours.",
+    "where": "privacy policy",
+    "test": "node --test --test-name-pattern='@claim:license-daily-verification' site/test/license.test.js",
+    "sandbox": "in-memory browser storage and a recorded fetch stub assert one request inside 24 hours and a new request at the 24-hour boundary"
+  },
+  {
+    "id": "license-local-verification",
+    "claim": "The browser stores the Team license token and verdict locally; verification sends only the token to the documented product endpoint.",
+    "where": "privacy policy",
+    "test": "node --test --test-name-pattern='@claim:license-local-verification' site/test/license.test.js",
+    "sandbox": "in-memory browser storage and a recorded fetch stub assert the two local values and exact token-only verification URL"
+  },
+  {
+    "id": "team-kit-price",
+    "claim": "The Team policy kit costs $49 USD as a one-time purchase; free ledger exports remain available.",
+    "where": "pricing, terms",
+    "test": "npm run test:e2e -- --grep '@claim:team-kit-price'",
+    "sandbox": "fresh unlicensed browser context asserts the exact price, official product checkout route, and visible free Markdown and JSON exports"
+  },
+  {
+    "id": "team-kit-checkout",
+    "claim": "The Team policy kit purchase link opens Sociobot's hosted checkout.",
+    "where": "pricing, terms",
+    "test": "npm run test:billing:live",
+    "sandbox": "a no-payment request to the registered product checkout asserts a 303 redirect to the hosted HTTPS checkout"
+  },
+  {
+    "id": "inactive-license-lock",
+    "claim": "When verification reports a Team license inactive, Team controls stay closed and free exports remain available.",
+    "where": "pricing, terms",
+    "test": "npm run test:e2e -- --grep '@claim:inactive-license-lock'",
+    "sandbox": "fresh browser context stores an inactive token, receives a recorded invalid verdict, and asserts hidden Team controls plus visible free exports"
   }
 ]

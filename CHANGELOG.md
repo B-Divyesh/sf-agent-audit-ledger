@@ -4,6 +4,10 @@ All notable changes follow semantic versioning.
 
 ## Unreleased
 
+- Register Team policy, license-cache, file-hashing, price, and checkout claims
+  with observable regressions.
+- Add complete route metadata and a product-derived Apple touch icon.
+- Raise every wordmark target to 44 px and fix singular file status copy.
 - Add a one-click isolated sample for the browser workbench and the aal demo
   command, with a bundled JSONL fixture and generated temporary workspace.
 - Add a tested claims manifest and demo-sandbox documentation.

@@ -1,6 +1,6 @@
 # Landing-page copy audit
 
-Audited 2026-08-30 from `site/index.html`. Counts treat hyphenated terms,
+Audited 2026-09-01 from `site/index.html`. Counts treat hyphenated terms,
 product names, command names, and numbers as one word. All visible landing
 sentences, headings, labels, actions, and footer copy are listed below. No
 entry exceeds 22 words or contains a banned plain-words term.
@@ -85,14 +85,15 @@ entry exceeds 22 words or contains a banned plain-words term.
 | ---: | --- |
 | 1 | Pricing |
 | 9 | Free ledger tools and a one-time team kit. |
-| 12 | The free CLI and browser tools export, redact, hash, and sign ledgers. |
-| 7 | The optional team kit saves policy presets. |
+| 7 | The free tools export redacted, hashed ledgers. |
+| 6 | The CLI can also sign them. |
+| 8 | The optional team kit saves one policy preset. |
 | 3 | Team policy kit |
 | 3 | 49 USD one-time |
-| 5 | Save named redaction policies locally |
+| 7 | Save one named redaction policy locally |
 | 6 | Export policy JSON for team repositories |
-| 5 | Reuse review conventions across projects |
-| 5 | All future v1 policy updates |
+| 7 | Reuse saved settings in later ledgers |
+| 8 | Include schema version 1 in every policy export |
 | 4 | Buy the team kit |
 | 10 | Sociobot/Dodo is merchant of record. Refunds revoke the license. |
 | 3 | Have a license? Restore it |
@@ -104,7 +105,7 @@ entry exceeds 22 words or contains a banned plain-words term.
 | 5 | Try it with sample data |
 | 7 | Local evidence for reviewing agent-assisted patches. |
 | 4 | Built by Param Factory |
-| 6 | v0.1.0 build agent-audit-ledger-repair-7 |
+| 6 | v0.1.0 build agent-audit-ledger-repair-8 |
 
 ## Terminology
 

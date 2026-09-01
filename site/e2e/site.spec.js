@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { readFile } from 'node:fs/promises';
 
 test.beforeEach(async ({ page }) => {
   await page.route('https://api.sociobot.in/**', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{"valid":false,"reason":"invalid"}' }));
@@ -12,7 +13,7 @@ test('home is accessible and builds a local ledger', async ({ page }) => {
   await expect(page.locator('h1')).toHaveCount(1);
   await page.getByRole('button', { name: 'Load sample' }).click();
   await page.getByRole('button', { name: 'Build the ledger' }).click();
-  await expect(page.getByRole('status').filter({ hasText: /Ledger ready/ })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Ledger ready: 1 file and 3 evidence events.' })).toBeVisible();
   await expect(page.locator('#preview')).toContainText('Evidence3');
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations.filter((item) => ['serious', 'critical'].includes(item.impact))).toEqual([]);
@@ -45,7 +46,7 @@ test('default browser redaction hides a leading environment secret', async ({ pa
   await expect(page.locator('#preview')).not.toContainText('supersecret');
 });
 
-test('selected basename hashes a directory-qualified browser path', async ({ page }) => {
+test('@claim:browser-file-hashing selected basename hashes a directory-qualified browser path', async ({ page }) => {
   await page.goto('/');
   await page.locator('#events').fill(`{"version":"1","time":"2026-08-28T00:00:00Z","type":"file","path":"src/lib.rs","action":"modified","reason":"path matching regression"}`);
   await page.locator('#files').setInputFiles({ name: 'lib.rs', mimeType: 'text/plain', buffer: Buffer.from('ordinary source file') });
@@ -61,7 +62,7 @@ test('keyboard starts at the skip link with no horizontal overflow', async ({ pa
   expect(await page.locator('body').evaluate((body) => body.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
-test('file chooser focus is visible and standalone targets are at least 44px', async ({ page }) => {
+test('file chooser focus is visible and standalone targets are at least 44px on every route', async ({ page }) => {
   await page.goto('/');
   for (let tab = 0; tab < 30 && await page.evaluate(() => document.activeElement?.id !== 'files'); tab += 1) {
     await page.keyboard.press('Tab');
@@ -74,11 +75,15 @@ test('file chooser focus is visible and standalone targets are at least 44px', a
   expect(focus.style).not.toBe('none');
   expect(focus.width).toBeGreaterThanOrEqual(3);
 
-  const undersized = await page.locator('.site-header nav a, footer nav a, .buy-column > p a').evaluateAll((links) => links
-    .filter((link) => link.getClientRects().length > 0)
-    .map((link) => { const box = link.getBoundingClientRect(); return { text: link.textContent.trim(), width: box.width, height: box.height }; })
-    .filter((box) => box.width < 44 || box.height < 44));
-  expect(undersized).toEqual([]);
+  for (const route of ['/', '/demo', '/privacy/', '/terms/', '/404.html']) {
+    await page.goto(route);
+    if (route === '/demo') await expect(page.locator('#preview')).toContainText('1 changed file');
+    const undersized = await page.locator('a.brand, .site-header nav a, footer nav a, a.button, button, summary, .file-picker, .check, .buy-column > p a').evaluateAll((targets) => targets
+      .filter((target) => target.getClientRects().length > 0)
+      .map((target) => { const box = target.getBoundingClientRect(); return { text: target.textContent.trim(), width: box.width, height: box.height }; })
+      .filter((box) => box.width < 44 || box.height < 44));
+    expect(undersized, route).toEqual([]);
+  }
 });
 
 test('reduced motion removes smooth scrolling and movement transitions', async ({ page }) => {
@@ -103,6 +108,56 @@ test('a cached invalid license is not rechecked on reload', async ({ page }) => 
   await page.reload();
   await page.reload();
   expect(verificationRequests).toBe(1);
+});
+
+test('@claim:team-policy-workflow saves, reuses, and exports a versioned Team policy', async ({ page }) => {
+  await page.addInitScript(() => {
+    const token = 'claim-valid-license';
+    localStorage.setItem('sb_license:agent-audit-ledger', token);
+    localStorage.setItem('sb_license:agent-audit-ledger:verdict', JSON.stringify({ token, valid: true, reason: 'ok', checkedAt: Date.now() }));
+  });
+  await page.goto('/');
+  await expect(page.locator('#pro-panel')).toBeVisible();
+  await page.locator('#policy-name').fill('Release review');
+  await page.locator('#include-paths').check();
+  await page.locator('#include-arguments').check();
+  await page.getByRole('button', { name: 'Save policy locally' }).click();
+  await expect(page.locator('#license-notice')).toHaveText('Saved “Release review” on this device.');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('aal:team-policy')))).toEqual({
+    name: 'Release review', includePaths: true, includeArguments: true
+  });
+
+  await page.reload();
+  await expect(page.locator('#policy-name')).toHaveValue('Release review');
+  await expect(page.locator('#include-paths')).toBeChecked();
+  await expect(page.locator('#include-arguments')).toBeChecked();
+
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Export policy JSON' }).click()
+  ]);
+  expect(download.suggestedFilename()).toBe('aal-team-policy.json');
+  const exported = JSON.parse(await readFile(await download.path(), 'utf8'));
+  expect(exported).toEqual({ schema_version: '1', name: 'Release review', includePaths: true, includeArguments: true });
+});
+
+test('@claim:team-kit-price publishes the exact one-time price without gating free exports', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('.price')).toHaveText('$49 USD · one-time');
+  await expect(page.getByRole('link', { name: 'Buy the team kit' })).toHaveAttribute('href', 'https://api.sociobot.in/api/v1/products/agent-audit-ledger/checkout');
+  await expect(page.getByRole('button', { name: 'Export MD' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Export JSON' })).toBeVisible();
+  await page.goto('/terms/');
+  await expect(page.getByText(/costs \$49 USD as a one-time purchase for one organization/)).toBeVisible();
+});
+
+test('@claim:inactive-license-lock keeps Team controls closed while free exports remain available', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('sb_license:agent-audit-ledger', 'inactive-license'));
+  await page.goto('/');
+  await expect(page.locator('#license-notice')).toContainText('License no longer active');
+  await expect(page.locator('#pro-panel')).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Export MD' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Export JSON' })).toBeVisible();
 });
 
 test('@claim:demo-sandbox opens a completed isolated sample ledger from the first screen', async ({ page }) => {
@@ -208,10 +263,24 @@ test('demo and legal pages have accessible landmarks and content', async ({ page
 });
 
 test('every route shows the factory and build identity, with a valid social card', async ({ page }) => {
-  for (const route of ['/', '/demo', '/privacy/', '/terms/', '/404.html']) {
+  const routes = [
+    ['/', 'Agent Audit Ledger — Review agent patches', 'https://agent-audit-ledger.sociobot.in/'],
+    ['/demo', 'Demo — Agent Audit Ledger', 'https://agent-audit-ledger.sociobot.in/demo'],
+    ['/privacy/', 'Privacy — Agent Audit Ledger', 'https://agent-audit-ledger.sociobot.in/privacy/'],
+    ['/terms/', 'Terms — Agent Audit Ledger', 'https://agent-audit-ledger.sociobot.in/terms/'],
+    ['/404.html', 'Page not found — Agent Audit Ledger', 'https://agent-audit-ledger.sociobot.in/404.html']
+  ];
+  for (const [route, title, canonical] of routes) {
     await page.goto(route);
     await expect(page.locator('footer')).toContainText('Built by Param Factory');
-    await expect(page.locator('footer')).toContainText('v0.1.0 · build agent-audit-ledger-repair-7');
+    await expect(page.locator('footer')).toContainText('v0.1.0 · build agent-audit-ledger-repair-8');
+    await expect(page).toHaveTitle(title);
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', canonical);
+    await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute('href', '/apple-touch-icon.png');
+    await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#17231f');
+    await expect(page.locator('meta[property="og:title"]')).toHaveAttribute('content', title);
+    await expect(page.locator('meta[name="twitter:title"]')).toHaveAttribute('content', title);
+    await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', /agent-audit-ledger-social\.webp$/);
   }
   await page.goto('/');
   await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', /agent-audit-ledger-social\.webp$/);

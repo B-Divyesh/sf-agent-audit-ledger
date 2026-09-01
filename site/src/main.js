@@ -4,6 +4,7 @@ import './demo-banner.css';
 import sampleEvents from '../../examples/review-actions.jsonl?raw';
 import { buildManifest, markdown, parseEvents } from './demo.js';
 import { captureLicense, saveLicense, verifyLicense } from './license.js';
+import './repair-8.css';
 
 const SAMPLE_SOURCE = 'pub fn linked_evidence_count(events: usize) -> usize {\n    events\n}\n';
 const DEMO_STORAGE_KEY = 'demo:agent-audit-ledger:workbench';
@@ -16,6 +17,11 @@ const preview = $('#preview');
 const status = $('#demo-status');
 let currentManifest;
 let demoFiles = [];
+
+function setMeta(selector, content) {
+  const element = document.querySelector(selector);
+  if (element) element.content = content;
+}
 
 function emptyPreview() {
   preview.innerHTML = '<div class="empty-mark" aria-hidden="true">○—○</div><h3>No ledger yet</h3><p>Paste events or load the sample. Your data stays in this browser.</p>';
@@ -57,7 +63,8 @@ async function buildLedger() {
       includeArguments: $('#include-arguments').checked
     });
     render(currentManifest);
-    status.textContent = `Ledger ready: ${currentManifest.summary.file_count} files and ${currentManifest.summary.evidence_count} evidence events.`;
+    const fileLabel = currentManifest.summary.file_count === 1 ? 'file' : 'files';
+    status.textContent = `Ledger ready: ${currentManifest.summary.file_count} ${fileLabel} and ${currentManifest.summary.evidence_count} evidence events.`;
     saveDemoState();
   } catch (error) {
     currentManifest = null;
@@ -140,6 +147,12 @@ async function reconcileLicense(token) {
 if (isDemo) {
   document.title = 'Demo — Agent Audit Ledger';
   document.querySelector('link[rel="canonical"]').href = 'https://agent-audit-ledger.sociobot.in/demo';
+  setMeta('meta[name="description"]', 'Try a completed Agent Audit Ledger with isolated sample data in your browser.');
+  setMeta('meta[property="og:title"]', 'Demo — Agent Audit Ledger');
+  setMeta('meta[property="og:description"]', 'Try a completed Agent Audit Ledger with isolated sample data in your browser.');
+  setMeta('meta[property="og:url"]', 'https://agent-audit-ledger.sociobot.in/demo');
+  setMeta('meta[name="twitter:title"]', 'Demo — Agent Audit Ledger');
+  setMeta('meta[name="twitter:description"]', 'Try a completed Agent Audit Ledger with isolated sample data in your browser.');
   $('#demo-banner').hidden = false;
   $('#pricing').hidden = true;
   licenseNotice.textContent = 'Demo mode does not read or save license or policy data.';

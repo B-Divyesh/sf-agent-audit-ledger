@@ -4,6 +4,7 @@ import test from 'node:test';
 
 const siteRoot = new URL('../', import.meta.url);
 const socialImage = 'https://agent-audit-ledger.sociobot.in/agent-audit-ledger-social.webp';
+const productOrigin = 'https://agent-audit-ledger.sociobot.in';
 function webpDimensions(bytes) {
   assert.equal(bytes.subarray(0, 4).toString('ascii'), 'RIFF');
   assert.equal(bytes.subarray(8, 12).toString('ascii'), 'WEBP');
@@ -30,21 +31,41 @@ function webpDimensions(bytes) {
   assert.fail('WebP image does not include a supported dimension chunk');
 }
 
-test('site contract keeps plain section copy, social metadata, and factory build identity', async () => {
-  const [home, privacy, terms, notFound, configText, socialBytes, copyAudit] = await Promise.all([
+test('site contract keeps plain section copy, complete route metadata, and factory build identity', async () => {
+  const [home, privacy, terms, notFound, configText, socialBytes, touchIcon, copyAudit] = await Promise.all([
     readFile(new URL('index.html', siteRoot), 'utf8'),
     readFile(new URL('privacy/index.html', siteRoot), 'utf8'),
     readFile(new URL('terms/index.html', siteRoot), 'utf8'),
     readFile(new URL('404.html', siteRoot), 'utf8'),
     readFile(new URL('public/staticwebapp.config.json', siteRoot), 'utf8'),
     readFile(new URL('public/agent-audit-ledger-social.webp', siteRoot)),
+    readFile(new URL('public/apple-touch-icon.png', siteRoot)),
     readFile(new URL('../../.factory/copy-audit.md', import.meta.url), 'utf8')
   ]);
 
   for (const document of [home, privacy, terms, notFound]) {
     assert.match(document, /Built by Param Factory/);
-    assert.match(document, /v0\.1\.0 · build agent-audit-ledger-repair-7/);
+    assert.match(document, /v0\.1\.0 · build agent-audit-ledger-repair-8/);
     assert.match(document, /Local evidence for reviewing agent-assisted patches\./);
+  }
+
+  const routeMetadata = [
+    [home, 'Agent Audit Ledger — Review agent patches', `${productOrigin}/`],
+    [privacy, 'Privacy — Agent Audit Ledger', `${productOrigin}/privacy/`],
+    [terms, 'Terms — Agent Audit Ledger', `${productOrigin}/terms/`],
+    [notFound, 'Page not found — Agent Audit Ledger', `${productOrigin}/404.html`]
+  ];
+  for (const [document, title, canonical] of routeMetadata) {
+    assert.match(document, new RegExp(`<title>${title}</title>`));
+    assert.match(document, new RegExp(`<link rel="canonical" href="${canonical}"`));
+    assert.match(document, /<meta name="theme-color" content="#17231f">/);
+    assert.match(document, /<link rel="apple-touch-icon" href="\/apple-touch-icon\.png" sizes="180x180">/);
+    assert.match(document, new RegExp(`<meta property="og:title" content="${title}"`));
+    assert.match(document, new RegExp(`<meta name="twitter:title" content="${title}"`));
+    assert.match(document, new RegExp(`property="og:image" content="${socialImage}"`));
+    assert.match(document, new RegExp(`name="twitter:image" content="${socialImage}"`));
+    const description = document.match(/<meta name="description" content="([^"]+)">/)?.[1];
+    assert.ok(description && description.length <= 155, `${title} needs a concise description`);
   }
 
   for (const requiredHeading of [
@@ -68,7 +89,9 @@ test('site contract keeps plain section copy, social metadata, and factory build
   assert.match(home, /property="og:image:width" content="1200"/);
   assert.match(home, /property="og:image:height" content="630"/);
   assert.deepEqual(webpDimensions(socialBytes), { width: 1200, height: 630 });
+  assert.deepEqual([touchIcon.readUInt32BE(16), touchIcon.readUInt32BE(20)], [180, 180]);
   assert.equal(JSON.parse(configText).routes.find((route) => route.route === '/agent-audit-ledger-social.webp')?.headers['Cache-Control'], 'public, max-age=31536000, immutable');
+  assert.equal(JSON.parse(configText).routes.find((route) => route.route === '/apple-touch-icon.png')?.headers['Cache-Control'], 'public, max-age=31536000, immutable');
 
   const auditedRows = [...copyAudit.matchAll(/^\|\s*(\d+)\s*\|\s*(.+?)\s*\|$/gm)];
   assert.ok(auditedRows.length >= 25, 'copy audit must cover the landing copy');
